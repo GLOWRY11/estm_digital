@@ -34,6 +34,29 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
+  
+  # Firebase
+  firebase_core: ^2.25.4
+  firebase_auth: ^4.17.4
+  cloud_firestore: ^4.15.4
+  
+  # State Management
+  flutter_riverpod: ^2.4.10
+  
+  # Local Storage
+  sqflite: ^2.3.2
+  path_provider: ^2.1.2
+  
+  # QR Code
+  qr_flutter: ^4.1.0
+  mobile_scanner: ^3.5.6
+  
+  # Utils
+  flutter_local_notifications: ^16.3.2
+  intl: ^0.17.0
+  charts_flutter: ^0.12.0
+  pdf: ^3.10.7
+  share_plus: ^7.2.2
 
 dev_dependencies:
   flutter_test:
