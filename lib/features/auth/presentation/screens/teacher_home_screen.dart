@@ -1,108 +1,120 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/auth_providers.dart';
 import '../../domain/entities/user.dart';
+import '../widgets/auth_wrapper.dart';
+import '../../../../core/routes/app_routes.dart';
 
 class TeacherHomeScreen extends ConsumerWidget {
-  const TeacherHomeScreen({Key? key}) : super(key: key);
+  final User user;
+
+  const TeacherHomeScreen({super.key, required this.user});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUserAsync = ref.watch(currentUserProvider);
-
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Espace Enseignant'),
+        title: Text('Accueil Enseignant'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
+            icon: Icon(Icons.logout),
             onPressed: () {
-              ref.read(authNotifierProvider.notifier).signOut();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (context) => AuthWrapper()),
+              );
             },
           ),
         ],
       ),
-      body: currentUserAsync.when(
-        data: (UserEntity? user) {
-          if (user == null) return const Center(child: Text('Utilisateur non connecté'));
-
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Bienvenue, Prof. ${user.displayName ?? user.email}',
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Text('Email: ${user.email}'),
-                        Text('Rôle: ${user.role}'),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                Text(
-                  'Fonctionnalités Enseignant',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-                const SizedBox(height: 16),
-                _buildFeatureCard(
-                  context,
-                  title: 'Gestion des cours',
-                  icon: Icons.class_,
-                  onTap: () {
-                    // Navigation vers la gestion des cours
-                  },
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: 'Prise de présence',
-                  icon: Icons.qr_code_scanner,
-                  onTap: () {
-                    // Navigation vers la prise de présence
-                  },
-                ),
-                _buildFeatureCard(
-                  context,
-                  title: 'Notes & Evaluations',
-                  icon: Icons.grading,
-                  onTap: () {
-                    // Navigation vers les notes et évaluations
-                  },
-                ),
-              ],
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Bienvenue, ${user.displayName ?? user.email}!',
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
-          child: Text('Erreur: $error'),
+            const SizedBox(height: 20),
+            Expanded(
+              child: GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                children: [
+                  _buildFeatureCard(
+                    context,
+                    'Gestion Absences',
+                    Icons.event_busy,
+                    Colors.red,
+                    () {
+                      Navigator.of(context).pushNamed(AppRoutes.absenceList);
+                    },
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    'Gestion Notes',
+                    Icons.grade,
+                    Colors.blue,
+                    () {
+                      Navigator.of(context).pushNamed(AppRoutes.teacherGrades);
+                    },
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    'Mes Cours',
+                    Icons.school,
+                    Colors.green,
+                    () {
+                      Navigator.of(context).pushNamed(AppRoutes.coursesList);
+                    },
+                  ),
+                  _buildFeatureCard(
+                    context,
+                    'Étudiants',
+                    Icons.people,
+                    Colors.orange,
+                    () {
+                      Navigator.of(context).pushNamed(AppRoutes.usersList);
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildFeatureCard(
-    BuildContext context, {
-    required String title,
-    required IconData icon,
-    required VoidCallback onTap,
-  }) {
+    BuildContext context,
+    String title,
+    IconData icon,
+    Color color,
+    VoidCallback onTap,
+  ) {
     return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).primaryColor),
-        title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+      child: InkWell(
         onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 48,
+                color: color,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: Theme.of(context).textTheme.titleMedium,
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,144 +1,157 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:async';
+import 'package:sqflite/sqflite.dart';
+import 'dart:developer' as developer;
+import '../../../../core/local_database.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../models/user_model.dart';
+import 'package:uuid/uuid.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  final FirebaseAuth _firebaseAuth;
-  final FirebaseFirestore _firestore;
+  final _streamController = StreamController<User?>.broadcast();
+  User? _currentUser;
+  
+  AuthRepositoryImpl() {
+    _init();
+  }
 
-  AuthRepositoryImpl({
-    required FirebaseAuth firebaseAuth,
-    required FirebaseFirestore firestore,
-  })  : _firebaseAuth = firebaseAuth,
-        _firestore = firestore;
-
-  @override
-  Stream<UserEntity?> get authStateChanges => _firebaseAuth.authStateChanges().asyncMap((User? firebaseUser) async {
-        if (firebaseUser == null) {
-          return null;
-        }
-        
-        try {
-          final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-          if (userDoc.exists) {
-            return UserModel.fromFirestore(userDoc);
-          } else {
-            // Si l'utilisateur existe dans Auth mais pas dans Firestore,
-            // on crée un document par défaut
-            final newUser = UserModel(
-              uid: firebaseUser.uid,
-              email: firebaseUser.email ?? '',
-              displayName: firebaseUser.displayName,
-              role: 'student', // Rôle par défaut
-            );
-            
-            await _firestore.collection('users').doc(firebaseUser.uid).set(newUser.toMap());
-            return newUser;
-          }
-        } catch (e) {
-          print('Error in authStateChanges: $e');
-          return null;
-        }
-      });
+  Future<void> _init() async {
+    developer.log('Initialisation du AuthRepositoryImpl');
+  }
 
   @override
-  Future<UserEntity?> getCurrentUser() async {
-    final firebaseUser = _firebaseAuth.currentUser;
-    if (firebaseUser == null) {
-      return null;
-    }
+  Stream<User?> get authStateChanges => _streamController.stream;
 
+  @override
+  Future<User?> getCurrentUser() async {
+    return _currentUser;
+  }
+
+  @override
+  Future<User> signInWithEmailAndPassword(String email, String password) async {
+    developer.log('Tentative de connexion avec $email');
     try {
-      final userDoc = await _firestore.collection('users').doc(firebaseUser.uid).get();
-      if (userDoc.exists) {
-        return UserModel.fromFirestore(userDoc);
+      final db = await LocalDatabase.open();
+      
+      final result = await db.query(
+        'users',
+        where: 'email = ? AND password = ?',
+        whereArgs: [email, password],
+      );
+      
+      if (result.isEmpty) {
+        throw Exception('Email ou mot de passe invalide');
       }
-      return null;
+      
+      final userData = result.first;
+      final user = UserModel.fromMap(userData);
+      
+      // Mettre à jour l'utilisateur courant
+      _currentUser = user;
+      _streamController.add(user);
+      
+      developer.log('Connexion réussie pour $email');
+      return user;
     } catch (e) {
-      print('Error in getCurrentUser: $e');
-      return null;
+      developer.log('Erreur lors de la connexion: $e');
+      throw Exception('Échec de l\'authentification: $e');
     }
   }
 
   @override
-  Future<UserEntity> signInWithEmailAndPassword(String email, String password) async {
+  Future<User> registerWithEmailAndPassword(String email, String password, String role) async {
+    developer.log('Tentative d\'inscription avec $email, rôle: $role');
     try {
-      final userCredential = await _firebaseAuth.signInWithEmailAndPassword(
-        email: email,
-        password: password,
+      final db = await LocalDatabase.open();
+      
+      // Vérifier si l'utilisateur existe déjà
+      final existingUser = await db.query(
+        'users',
+        where: 'email = ?',
+        whereArgs: [email],
       );
-
-      if (userCredential.user == null) {
-        throw Exception('Authentication failed: User is null');
+      
+      if (existingUser.isNotEmpty) {
+        throw Exception('Un utilisateur avec cet email existe déjà');
       }
-
-      final userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
-      if (userDoc.exists) {
-        return UserModel.fromFirestore(userDoc);
-      } else {
-        throw Exception('User data not found in Firestore');
-      }
-    } on FirebaseAuthException catch (e) {
-      throw _handleFirebaseAuthException(e);
-    } catch (e) {
-      throw Exception('Authentication failed: $e');
-    }
-  }
-
-  @override
-  Future<UserEntity> registerWithEmailAndPassword(String email, String password, String role) async {
-    try {
-      final userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-
-      if (userCredential.user == null) {
-        throw Exception('Registration failed: User is null');
-      }
-
+      
+      // Créer un nouvel utilisateur
+      final userId = const Uuid().v4();
+      final now = DateTime.now();
+      
       final user = UserModel(
-        uid: userCredential.user!.uid,
+        id: userId,
         email: email,
         displayName: null,
         role: role,
+        isActive: true,
+        createdAt: now,
       );
-
-      await _firestore.collection('users').doc(user.uid).set(user.toMap());
+      
+      await db.insert('users', {
+        'id': user.id,
+        'email': user.email,
+        'password': password, // Idéalement, hasher le mot de passe
+        'displayName': user.displayName,
+        'role': user.role,
+        'isActive': 1,
+        'createdAt': now.toIso8601String(),
+      });
+      
+      // Mettre à jour l'utilisateur courant
+      _currentUser = user;
+      _streamController.add(user);
+      
+      developer.log('Inscription réussie pour $email');
       return user;
-    } on FirebaseAuthException catch (e) {
-      throw _handleFirebaseAuthException(e);
     } catch (e) {
-      throw Exception('Registration failed: $e');
+      developer.log('Erreur lors de l\'inscription: $e');
+      throw Exception('Échec de l\'inscription: $e');
     }
   }
 
   @override
   Future<void> signOut() async {
-    await _firebaseAuth.signOut();
+    developer.log('Déconnexion...');
+    _currentUser = null;
+    _streamController.add(null);
   }
 
   @override
   Future<void> updateUserRole(String uid, String role) async {
-    await _firestore.collection('users').doc(uid).update({'role': role});
-  }
-
-  Exception _handleFirebaseAuthException(FirebaseAuthException e) {
-    switch (e.code) {
-      case 'user-not-found':
-        return Exception('No user found with this email');
-      case 'wrong-password':
-        return Exception('Incorrect password');
-      case 'email-already-in-use':
-        return Exception('This email is already registered');
-      case 'weak-password':
-        return Exception('Password is too weak');
-      case 'invalid-email':
-        return Exception('Invalid email format');
-      default:
-        return Exception('Authentication error: ${e.message}');
+    developer.log('Mise à jour du rôle utilisateur $uid vers $role');
+    try {
+      final db = await LocalDatabase.open();
+      
+      await db.update(
+        'users',
+        {'role': role},
+        where: 'id = ?',
+        whereArgs: [uid],
+      );
+      
+      if (_currentUser != null && _currentUser!.id == uid) {
+        final updatedUser = UserModel(
+          id: _currentUser!.id,
+          email: _currentUser!.email,
+          displayName: _currentUser!.displayName,
+          role: role,
+          phoneNumber: _currentUser!.phoneNumber,
+          address: _currentUser!.address,
+          profileImageUrl: _currentUser!.profileImageUrl,
+          classId: _currentUser!.classId,
+          dateOfBirth: _currentUser!.dateOfBirth,
+          studentId: _currentUser!.studentId,
+          isActive: _currentUser!.isActive,
+          createdAt: _currentUser!.createdAt,
+          lastModifiedAt: DateTime.now(),
+        );
+        _currentUser = updatedUser;
+        _streamController.add(_currentUser);
+      }
+    } catch (e) {
+      developer.log('Erreur lors de la mise à jour du rôle utilisateur: $e');
+      throw Exception('Échec de la mise à jour du rôle: $e');
     }
   }
 } 

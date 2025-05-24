@@ -83,6 +83,59 @@ Consumer(
 )
 ```
 
+## Tests et Qualité du Code
+
+L'application intègre différents types de tests pour assurer sa qualité et sa robustesse :
+
+### Structure des tests
+
+```
+test/
+├── unit_tests/              # Tests unitaires
+│   ├── core/                # Tests des fonctionnalités de base
+│   └── features/            # Tests unitaires par fonctionnalité
+│       └── complaints/      # Tests unitaires de la fonctionnalité réclamations
+├── widget_tests/            # Tests des widgets
+│   └── complaints/          # Tests des widgets de la fonctionnalité réclamations
+├── integration_tests/       # Tests d'intégration
+│   └── complaints_workflow_test.dart  # Test du flux complet de réclamations
+└── all_tests.dart           # Fichier pour exécuter tous les tests
+```
+
+### Types de tests
+
+1. **Tests unitaires** : Testent les différentes parties du code en isolation
+   - Tests des modèles (ex: Complaint)
+   - Tests des repositories
+   - Tests des providers
+
+2. **Tests de widgets** : Testent le comportement des composants UI
+   - Tests de rendu
+   - Tests d'interaction
+
+3. **Tests d'intégration** : Testent l'interaction entre différentes parties de l'application
+   - Tests de flux complets (ex: soumission et gestion d'une réclamation)
+
+### Exécution des tests
+
+Pour exécuter tous les tests :
+
+```bash
+flutter test
+```
+
+Pour exécuter un test spécifique :
+
+```bash
+flutter test test/unit_tests/complaints/complaint_model_test.dart
+```
+
+Pour exécuter tous les tests avec couverture de code :
+
+```bash
+flutter test --coverage
+```
+
 ## Dépendances principales
 
 - **Firebase** : Authentication, Firestore
@@ -93,3 +146,13 @@ Consumer(
 - **intl** : Internationalisation
 - **charts_flutter** : Visualisations graphiques
 - **pdf & share_plus** : Génération et partage de PDF
+- **uuid** : Génération d'identifiants uniques
+- **table_calendar** : Affichage du calendrier
+
+### Dépendances de développement
+
+- **flutter_test** : Framework de test Flutter
+- **sqflite_common_ffi** : Support de SQLite pour les tests
+- **mockito** : Création de mocks pour les tests
+- **build_runner** : Génération de code
+- **flutter_lints** : Linting du code

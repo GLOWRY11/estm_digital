@@ -1,0 +1,106 @@
+@startuml ESTM Digital - Use Case Diagram
+
+skinparam actorStyle awesome
+skinparam packageStyle rectangle
+skinparam usecaseStyle roundedBox
+
+title ESTM Digital - Diagramme de Cas d'Utilisation
+
+' Acteurs
+actor "Étudiant" as Student
+actor "Enseignant" as Teacher
+actor "Administrateur" as Admin
+actor "Système" as System
+
+' Packages pour regrouper les cas d'utilisation par domaine
+package "Gestion des Utilisateurs" {
+  usecase "S'inscrire" as UC1
+  usecase "Se connecter" as UC2
+  usecase "Modifier profil" as UC3
+  usecase "Changer mot de passe" as UC4
+  usecase "Se déconnecter" as UC5
+  usecase "Gérer utilisateurs" as UC6
+}
+
+package "Gestion des Présences" {
+  usecase "Scanner QR code" as UC10
+  usecase "Générer QR code" as UC11
+  usecase "Consulter ses absences" as UC12
+  usecase "Consulter absences par classe" as UC13
+  usecase "Marquer présence manuellement" as UC14
+}
+
+package "Gestion des Réclamations" {
+  usecase "Soumettre réclamation" as UC20
+  usecase "Consulter ses réclamations" as UC21
+  usecase "Traiter réclamation" as UC22
+  usecase "Consulter toutes les réclamations" as UC23
+}
+
+package "Rapports et Statistiques" {
+  usecase "Générer rapport CSV" as UC30
+  usecase "Générer rapport PDF" as UC31
+  usecase "Consulter statistiques" as UC32
+}
+
+package "Système" {
+  usecase "Synchroniser données" as UC40
+  usecase "Notifier utilisateurs" as UC41
+  usecase "Sauvegarder données" as UC42
+  usecase "Restaurer données" as UC43
+}
+
+' Relations Étudiant
+Student --> UC1
+Student --> UC2
+Student --> UC3
+Student --> UC4
+Student --> UC5
+Student --> UC10
+Student --> UC12
+Student --> UC20
+Student --> UC21
+
+' Relations Enseignant
+Teacher --> UC1
+Teacher --> UC2
+Teacher --> UC3
+Teacher --> UC4
+Teacher --> UC5
+Teacher --> UC11
+Teacher --> UC13
+Teacher --> UC14
+Teacher --> UC30
+Teacher --> UC31
+Teacher --> UC32
+
+' Relations Administrateur
+Admin --> UC2
+Admin --> UC3
+Admin --> UC4
+Admin --> UC5
+Admin --> UC6
+Admin --> UC13
+Admin --> UC22
+Admin --> UC23
+Admin --> UC30
+Admin --> UC31
+Admin --> UC32
+Admin --> UC42
+Admin --> UC43
+
+' Relations Système
+System --> UC40
+System --> UC41
+System --> UC42
+
+' Relations d'extension et d'inclusion
+UC1 ..> UC2 : <<include>>
+UC6 ..> UC3 : <<extend>>
+UC6 ..> UC4 : <<extend>>
+UC22 ..> UC41 : <<include>>
+UC10 ..> UC40 : <<include>>
+UC11 ..> UC40 : <<include>>
+UC20 ..> UC40 : <<include>>
+
+@enduml 

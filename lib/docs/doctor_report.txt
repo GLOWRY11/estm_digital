@@ -1,0 +1,49 @@
+[√] Flutter (Channel stable, 3.29.3, on Microsoft Windows [Version 10.0.19045.5796], locale en-US) [1,466ms]
+    • Flutter version 3.29.3 on channel stable at C:\flutter
+    • Upstream repository https://github.com/flutter/flutter.git
+    • Framework revision ea121f8859 (6 weeks ago), 2025-04-11 19:10:07 +0000
+    • Engine revision cf56914b32
+    • Dart version 3.7.2
+    • DevTools version 2.42.3
+
+[√] Windows Version (10 Home 64-bit, 22H2, 2009) [8.9s]
+
+[√] Android toolchain - develop for Android devices (Android SDK version 35.0.1) [25.0s]
+    • Android SDK at C:\Users\mr\AppData\Local\Android\sdk
+    • Platform android-35, build-tools 35.0.1
+    • ANDROID_HOME = C:\Users\mr\AppData\Local\Android\sdk
+    • ANDROID_SDK_ROOT = C:\Users\mr\AppData\Local\Android\sdk
+    • Java binary at: D:\Android Studio\jbr\bin\java
+      This JDK is specified in your Flutter configuration.
+      To change the current JDK, run: `flutter config --jdk-dir="path/to/jdk"`.
+    • Java version OpenJDK Runtime Environment (build 21.0.6+-13368085-b895.109)
+    • All Android licenses accepted.
+
+[√] Chrome - develop for the web [91ms]
+    • Chrome at C:\Program Files\Google\Chrome\Application\chrome.exe
+
+[X] Visual Studio - develop Windows apps [89ms]
+    X Visual Studio not installed; this is necessary to develop Windows apps.
+      Download at https://visualstudio.microsoft.com/downloads/.
+      Please install the "Desktop development with C++" workload, including all of its default components
+
+[√] Android Studio (version 2024.3.2) [79ms]
+    • Android Studio at D:\Android Studio
+    • Flutter plugin can be installed from:
+       https://plugins.jetbrains.com/plugin/9212-flutter
+    • Dart plugin can be installed from:
+       https://plugins.jetbrains.com/plugin/6351-dart
+    • android-studio-dir = D:\Android Studio
+    • Java version OpenJDK Runtime Environment (build 21.0.6+-13368085-b895.109)
+
+[√] Connected device (4 available) [3.5s]
+    • sdk gphone64 x86 64 (mobile) • emulator-5554 • android-x64    • Android 16 (API 36) (emulator)
+    • Windows (desktop)            • windows       • windows-x64    • Microsoft Windows [Version
+      10.0.19045.5796]
+    • Chrome (web)                 • chrome        • web-javascript • Google Chrome 136.0.7103.114
+    • Edge (web)                   • edge          • web-javascript • Microsoft Edge 136.0.3240.50
+
+[√] Network resources [6.3s]
+    • All expected network resources are available.
+
+! Doctor found issues in 1 category. 

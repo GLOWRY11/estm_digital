@@ -1,0 +1,121 @@
+@startuml ESTM Digital - Sequence Diagram
+
+skinparam sequenceArrowThickness 2
+skinparam roundcorner 15
+skinparam maxmessagesize 100
+skinparam sequenceParticipant underline
+
+title ESTM Digital - Diagramme de Séquence: Enregistrement de Présence par QR Code
+
+actor "Enseignant" as Teacher
+actor "Étudiant" as Student
+participant "UI Enseignant" as TeacherUI
+participant "UI Étudiant" as StudentUI
+participant "SessionNotifier" as SessionProvider
+participant "AbsenceNotifier" as AbsenceProvider
+participant "SessionRepository" as SessionRepo
+participant "AbsenceRepository" as AbsenceRepo
+participant "LocalDatabaseService" as LocalDB
+participant "SyncService" as Sync
+database "SQLite DB" as DB
+
+' Génération du QR Code par l'enseignant
+Teacher -> TeacherUI: 1. Demande de génération QR
+activate TeacherUI
+TeacherUI -> SessionProvider: 2. generateQRCode(sessionId)
+activate SessionProvider
+SessionProvider -> SessionRepo: 3. generateQRCode(sessionId)
+activate SessionRepo
+
+SessionRepo -> SessionRepo: 4. Création valeur QR unique
+SessionRepo -> LocalDB: 5. Mise à jour session avec QR
+activate LocalDB
+LocalDB -> DB: 6. update('sessions', ...)
+activate DB
+DB --> LocalDB: 7. Mise à jour réussie
+deactivate DB
+LocalDB --> SessionRepo: 8. Session mise à jour
+deactivate LocalDB
+
+SessionRepo -> Sync: 9. syncEntity('session', sessionId)
+activate Sync
+Sync -> DB: 10. Marquer comme à synchroniser
+activate DB
+DB --> Sync: OK
+deactivate DB
+Sync --> SessionRepo: 11. Synchronisation planifiée
+deactivate Sync
+
+SessionRepo --> SessionProvider: 12. Valeur QR générée
+deactivate SessionRepo
+SessionProvider --> TeacherUI: 13. Valeur QR
+deactivate SessionProvider
+TeacherUI --> Teacher: 14. Affichage du QR code
+deactivate TeacherUI
+
+note right of Teacher: L'enseignant montre le QR code aux étudiants
+
+' Scan du QR code par l'étudiant
+Student -> StudentUI: 15. Scanne le QR code
+activate StudentUI
+StudentUI -> AbsenceProvider: 16. markPresence(qrValue)
+activate AbsenceProvider
+AbsenceProvider -> SessionRepo: 17. validateQRCode(qrValue)
+activate SessionRepo
+
+SessionRepo -> LocalDB: 18. Vérifier validité QR
+activate LocalDB
+LocalDB -> DB: 19. query('sessions', ...)
+activate DB
+DB --> LocalDB: 20. Données session
+deactivate DB
+LocalDB --> SessionRepo: 21. Session trouvée
+deactivate LocalDB
+
+SessionRepo --> AbsenceProvider: 22. QR valide (sessionId)
+deactivate SessionRepo
+
+AbsenceProvider -> AbsenceRepo: 23. markPresence(studentId, sessionId)
+activate AbsenceRepo
+AbsenceRepo -> LocalDB: 24. Enregistrer présence
+activate LocalDB
+LocalDB -> DB: 25. insert('absences', ...)
+activate DB
+DB --> LocalDB: 26. Présence enregistrée
+deactivate DB
+LocalDB --> AbsenceRepo: 27. Enregistrement OK
+deactivate LocalDB
+
+AbsenceRepo -> Sync: 28. syncEntity('absence', absenceId)
+activate Sync
+Sync -> DB: 29. Marquer comme à synchroniser
+activate DB
+DB --> Sync: OK
+deactivate DB
+Sync --> AbsenceRepo: 30. Synchronisation planifiée
+deactivate Sync
+
+AbsenceRepo --> AbsenceProvider: 31. Présence marquée
+deactivate AbsenceRepo
+AbsenceProvider --> StudentUI: 32. Confirmation
+deactivate AbsenceProvider
+StudentUI --> Student: 33. Affichage "Présence enregistrée"
+deactivate StudentUI
+
+' Synchronisation en arrière-plan
+note over Sync: Plus tard, en arrière-plan
+
+Sync -> Sync: 34. syncData()
+activate Sync
+Sync -> DB: 35. Récupérer données non synchronisées
+activate DB
+DB --> Sync: 36. Données à synchroniser
+deactivate DB
+Sync -> Sync: 37. Envoi au serveur (si en ligne)
+Sync -> DB: 38. Mettre à jour statut sync
+activate DB
+DB --> Sync: 39. Mise à jour OK
+deactivate DB
+deactivate Sync
+
+@enduml 

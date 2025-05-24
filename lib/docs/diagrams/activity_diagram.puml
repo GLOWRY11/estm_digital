@@ -1,0 +1,94 @@
+@startuml ESTM Digital - Activity Diagram
+
+skinparam ActivityBackgroundColor lightGrey
+skinparam ActivityBorderColor black
+skinparam ActivityDiamondBackgroundColor lightGreen
+skinparam ActivityDiamondBorderColor darkGreen
+skinparam ArrowColor black
+skinparam ActivityStartColor green
+skinparam ActivityEndColor red
+
+title ESTM Digital - Diagramme d'Activité: Soumission et Traitement des Réclamations
+
+|Étudiant|
+start
+:Ouvrir l'application;
+:Se connecter au compte;
+:Accéder au module Réclamations;
+:Créer une nouvelle réclamation;
+:Remplir le formulaire de réclamation;
+:Soumettre la réclamation;
+
+|Système|
+:Valider les champs du formulaire;
+if (Formulaire valide?) then (oui)
+  :Enregistrer la réclamation dans la BDD locale;
+  :Définir le statut de la réclamation comme "En attente";
+  :Marquer pour synchronisation;
+  if (Connexion Internet disponible?) then (oui)
+    :Synchroniser immédiatement;
+    :Envoyer notification à l'administrateur;
+  else (non)
+    :Stocker pour synchronisation ultérieure;
+  endif
+  :Afficher confirmation de soumission;
+else (non)
+  :Afficher erreurs de validation;
+  |Étudiant|
+  :Corriger les erreurs;
+  goto Soumettre la réclamation;
+endif
+
+|Administrateur|
+:Recevoir notification de nouvelle réclamation;
+:Ouvrir l'application;
+:Se connecter au compte administrateur;
+:Accéder au module Réclamations;
+:Consulter la liste des réclamations;
+:Sélectionner la réclamation à traiter;
+:Examiner les détails de la réclamation;
+
+if (Réclamation complète?) then (oui)
+  :Prendre une décision;
+  if (Décision?) then (Accepter)
+    :Définir le statut comme "Acceptée";
+    :Ajouter commentaire si nécessaire;
+  else (Rejeter)
+    :Définir le statut comme "Rejetée";
+    :Ajouter raison du rejet;
+  endif
+  :Enregistrer la décision;
+else (non)
+  :Demander plus d'informations;
+  :Définir le statut comme "Informations requises";
+  :Enregistrer la demande;
+endif
+
+|Système|
+:Mettre à jour la réclamation dans la BDD;
+:Définir le statut de synchronisation comme "À synchroniser";
+if (Connexion Internet disponible?) then (oui)
+  :Synchroniser les modifications;
+  :Envoyer notification à l'étudiant;
+else (non)
+  :Stocker pour synchronisation ultérieure;
+endif
+
+|Étudiant|
+:Recevoir notification de mise à jour;
+:Consulter le statut de la réclamation;
+if (Statut = "Informations requises"?) then (oui)
+  :Fournir les informations supplémentaires;
+  goto Système;
+else (non)
+  if (Réclamation acceptée?) then (oui)
+    :Voir les détails de l'acceptation;
+  else (non)
+    :Voir la raison du rejet;
+    :Créer une nouvelle réclamation si nécessaire;
+  endif
+endif
+
+stop
+
+@enduml 

@@ -1,5 +1,5 @@
 name: estm_digital
-description: "A new Flutter project."
+description: "Application ESTM Digital - Gestion académique avec architecture Clean et SQLite"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -30,37 +30,48 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   
-  # Firebase
-  firebase_core: ^2.25.4
-  firebase_auth: ^4.17.4
-  cloud_firestore: ^4.15.4
-  
   # State Management
   flutter_riverpod: ^2.4.10
   
   # Local Storage
-  sqflite: ^2.3.2
-  path_provider: ^2.1.2
+  sqflite: ^2.4.2
+  path_provider: ^2.1.5
+  path: ^1.9.0
   
   # QR Code
   qr_flutter: ^4.1.0
   mobile_scanner: ^3.5.6
   
+  # Notifications
+  flutter_local_notifications: ^17.1.2
+  
   # Utils
-  flutter_local_notifications: ^16.3.2
-  intl: ^0.17.0
-  charts_flutter: ^0.12.0
+  intl: ^0.19.0
   pdf: ^3.10.7
+  uuid: ^4.5.1
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.5.3
+  
+  # Charts et partage
+  fl_chart: ^0.66.2
   share_plus: ^7.2.2
+  
+  # Calendar
+  table_calendar: ^3.0.9
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  integration_test:
+    sdk: flutter
+  sqflite_common_ffi: ^2.3.5
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -68,6 +79,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  build_runner: ^2.4.15
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -110,3 +122,8 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+  # Assets pour l'application
+  # assets:
+  #   - images/
+  #   - docs/

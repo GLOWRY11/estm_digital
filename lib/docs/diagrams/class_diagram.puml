@@ -1,0 +1,261 @@
+@startuml ESTM Digital - Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam classStyle plain
+
+title ESTM Digital - Diagramme de Classes
+
+' Packages pour l'organisation
+package "Domain" {
+  ' Entités principales du domaine
+  class User {
+    +id: String
+    +email: String
+    +password: String
+    +displayName: String
+    +role: String
+    +phoneNumber: String
+    +address: String
+    +profileImageUrl: String
+    +classId: String
+    +dateOfBirth: DateTime
+    +studentId: int
+    +isActive: bool
+    +createdAt: DateTime
+    +lastModifiedAt: DateTime
+    +syncStatus: int
+  }
+
+  class Absence {
+    +id: String
+    +studentId: String
+    +sessionId: String
+    +date: DateTime
+    +time: String
+    +status: String
+    +verifiedBy: String
+    +createdAt: DateTime
+    +syncStatus: int
+  }
+
+  class Complaint {
+    +id: String
+    +userId: String
+    +text: String
+    +status: String
+    +createdAt: DateTime
+    +updatedAt: DateTime
+    +adminComment: String
+    +syncStatus: int
+  }
+
+  class Session {
+    +id: String
+    +teacherId: String
+    +classId: String
+    +subjectId: String
+    +date: DateTime
+    +startTime: String
+    +endTime: String
+    +roomId: String
+    +qrCodeValue: String
+    +status: String
+    +createdAt: DateTime
+    +syncStatus: int
+  }
+
+  class Class {
+    +id: String
+    +name: String
+    +level: String
+    +departmentId: String
+    +academicYear: String
+    +createdAt: DateTime
+    +syncStatus: int
+  }
+
+  class Subject {
+    +id: String
+    +name: String
+    +code: String
+    +description: String
+    +credits: int
+    +departmentId: String
+    +syncStatus: int
+  }
+
+  class Room {
+    +id: String
+    +name: String
+    +capacity: int
+    +location: String
+    +syncStatus: int
+  }
+
+  class Report {
+    +id: String
+    +title: String
+    +type: String
+    +generatedBy: String
+    +startDate: DateTime
+    +endDate: DateTime
+    +classId: String
+    +format: String
+    +filePath: String
+    +createdAt: DateTime
+  }
+
+  class SyncLog {
+    +id: String
+    +entityType: String
+    +entityId: String
+    +action: String
+    +timestamp: DateTime
+    +status: String
+    +errorMessage: String
+  }
+}
+
+package "Data" {
+  ' Repositories
+  class UserRepository {
+    +getCurrentUser(): Future<User?>
+    +signIn(email, password): Future<User>
+    +register(email, password, role): Future<User>
+    +signOut(): Future<void>
+    +updateUserProfile(User): Future<void>
+    +deleteUser(id): Future<void>
+    +getAllUsers(): Future<List<User>>
+    +getUsersByRole(role): Future<List<User>>
+    +getUserById(id): Future<User?>
+  }
+
+  class AbsenceRepository {
+    +getAbsencesByStudent(studentId): Future<List<Absence>>
+    +getAbsencesBySession(sessionId): Future<List<Absence>>
+    +getAbsencesByClass(classId, date): Future<List<Absence>>
+    +markPresence(studentId, sessionId): Future<void>
+    +deleteAbsence(id): Future<void>
+    +getAbsenceStatistics(classId, startDate, endDate): Future<Map>
+  }
+
+  class ComplaintRepository {
+    +getComplaintsByUser(userId): Future<List<Complaint>>
+    +getAllComplaints(): Future<List<Complaint>>
+    +submitComplaint(Complaint): Future<String>
+    +updateComplaintStatus(id, status, comment): Future<void>
+    +deleteComplaint(id): Future<void>
+  }
+
+  class SessionRepository {
+    +createSession(Session): Future<String>
+    +getSessionsByTeacher(teacherId): Future<List<Session>>
+    +getSessionsByClass(classId): Future<List<Session>>
+    +generateQRCode(sessionId): Future<String>
+    +validateQRCode(qrValue): Future<bool>
+  }
+
+  class ReportRepository {
+    +generateCSVReport(startDate, endDate, classId): Future<String>
+    +generatePDFReport(startDate, endDate, classId): Future<String>
+    +getReportsByUser(userId): Future<List<Report>>
+    +shareReport(reportId): Future<void>
+  }
+
+  class LocalDatabaseService {
+    +open(): Future<Database>
+    +close(): Future<void>
+    +insert(table, data): Future<int>
+    +query(table, conditions): Future<List<Map>>
+    +update(table, data, where): Future<int>
+    +delete(table, where): Future<int>
+    +execute(sql): Future<void>
+    +batch(): Future<void>
+  }
+
+  class SyncService {
+    +syncData(): Future<void>
+    +syncEntity(type, id): Future<bool>
+    +getSyncStatus(): Future<Map<String, int>>
+    +logSync(entityType, entityId, action): Future<void>
+    +getFailedSyncs(): Future<List<SyncLog>>
+    +retryFailedSyncs(): Future<int>
+  }
+}
+
+package "Presentation" {
+  ' Contrôleurs et Providers
+  class AuthNotifier {
+    +authState: AsyncValue<User?>
+    +signIn(email, password): Future<void>
+    +register(email, password, role): Future<void>
+    +signOut(): Future<void>
+  }
+
+  class AbsenceNotifier {
+    +absences: AsyncValue<List<Absence>>
+    +fetchAbsences(userId): Future<void>
+    +markPresence(sessionId): Future<void>
+  }
+
+  class ComplaintNotifier {
+    +complaints: AsyncValue<List<Complaint>>
+    +fetchComplaints(): Future<void>
+    +submitComplaint(text): Future<void>
+    +updateComplaintStatus(id, status, comment): Future<void>
+  }
+
+  class SessionNotifier {
+    +sessions: AsyncValue<List<Session>>
+    +fetchSessions(classId): Future<void>
+    +createSession(Session): Future<void>
+    +generateQRCode(sessionId): Future<String>
+  }
+
+  class ReportNotifier {
+    +reports: AsyncValue<List<Report>>
+    +fetchReports(): Future<void>
+    +generateReport(type, startDate, endDate, classId): Future<String>
+  }
+}
+
+' Relations entre classes
+User "1" -- "0..*" Absence : a >
+User "1" -- "0..*" Complaint : submits >
+User "1" -- "0..*" Session : teaches >
+User "*" -- "1" Class : belongs to >
+Session "1" -- "0..*" Absence : records >
+Session "*" -- "1" Subject : covers >
+Session "*" -- "1" Room : held in >
+Class "1" -- "0..*" Session : has >
+User "1" -- "0..*" Report : generates >
+
+' Relations avec les repositories
+UserRepository ..> User : manages >
+AbsenceRepository ..> Absence : manages >
+ComplaintRepository ..> Complaint : manages >
+SessionRepository ..> Session : manages >
+ReportRepository ..> Report : manages >
+
+' Relations avec les services
+LocalDatabaseService ..> UserRepository : supports >
+LocalDatabaseService ..> AbsenceRepository : supports >
+LocalDatabaseService ..> ComplaintRepository : supports >
+LocalDatabaseService ..> SessionRepository : supports >
+LocalDatabaseService ..> ReportRepository : supports >
+
+SyncService ..> UserRepository : synchronizes >
+SyncService ..> AbsenceRepository : synchronizes >
+SyncService ..> ComplaintRepository : synchronizes >
+SyncService ..> SessionRepository : synchronizes >
+SyncService ..> SyncLog : logs >
+
+' Relations avec les notifiers
+AuthNotifier ..> UserRepository : uses >
+AbsenceNotifier ..> AbsenceRepository : uses >
+ComplaintNotifier ..> ComplaintRepository : uses >
+SessionNotifier ..> SessionRepository : uses >
+ReportNotifier ..> ReportRepository : uses >
+
+@enduml 

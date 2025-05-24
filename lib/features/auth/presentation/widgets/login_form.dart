@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_providers.dart';
+import 'dart:developer' as developer;
 
 class LoginForm extends ConsumerStatefulWidget {
-  const LoginForm({Key? key}) : super(key: key);
+  const LoginForm({super.key});
 
   @override
   ConsumerState<LoginForm> createState() => _LoginFormState();
@@ -23,8 +24,19 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     super.dispose();
   }
 
+  @override
+  void initState() {
+    super.initState();
+    // Pré-remplir avec le premier utilisateur pour simplifier les tests
+    _emailController.text = 'admin@estm.sn';
+    _passwordController.text = 'admin123';
+  }
+
   Future<void> _login() async {
+    developer.log('Tentative de connexion avec: ${_emailController.text}');
+    
     if (!_formKey.currentState!.validate()) {
+      developer.log('Validation du formulaire échouée');
       return;
     }
 
@@ -34,11 +46,14 @@ class _LoginFormState extends ConsumerState<LoginForm> {
     });
 
     try {
+      developer.log('Appel de la méthode signIn');
       await ref.read(authNotifierProvider.notifier).signIn(
             _emailController.text.trim(),
             _passwordController.text,
           );
+      developer.log('Connexion réussie');
     } catch (e) {
+      developer.log('Erreur lors de la connexion: $e');
       setState(() {
         _errorMessage = e.toString();
       });
@@ -53,6 +68,9 @@ class _LoginFormState extends ConsumerState<LoginForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Observer l'état d'authentification
+    final authState = ref.watch(authNotifierProvider);
+    
     return Form(
       key: _formKey,
       child: Column(
@@ -102,6 +120,15 @@ class _LoginFormState extends ConsumerState<LoginForm> {
             const SizedBox(height: 16),
             Text(
               _errorMessage!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+              textAlign: TextAlign.center,
+            ),
+          ],
+          // Afficher l'état de l'authentification
+          if (authState.hasError) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Erreur: ${authState.error}',
               style: TextStyle(color: Theme.of(context).colorScheme.error),
               textAlign: TextAlign.center,
             ),

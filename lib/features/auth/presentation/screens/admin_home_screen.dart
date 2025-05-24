@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../../domain/entities/user.dart';
+import '../../../../core/routes/app_routes.dart';
 
 class AdminHomeScreen extends ConsumerWidget {
-  const AdminHomeScreen({Key? key}) : super(key: key);
+  const AdminHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentUserAsync = ref.watch(currentUserProvider);
+    final currentUser = ref.watch(currentUserProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Admin Dashboard'),
+        title: const Text('Administration ESTM'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -22,11 +23,9 @@ class AdminHomeScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: currentUserAsync.when(
-        data: (UserEntity? user) {
-          if (user == null) return const Center(child: Text('Utilisateur non connecté'));
-
-          return SingleChildScrollView(
+      body: currentUser == null 
+        ? const Center(child: Text('Utilisateur non connecté'))
+        : SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,19 +37,19 @@ class AdminHomeScreen extends ConsumerWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Bienvenue, Admin ${user.displayName ?? user.email}',
+                          'Bienvenue, Admin ${currentUser.displayName ?? currentUser.email}',
                           style: Theme.of(context).textTheme.headlineSmall,
                         ),
                         const SizedBox(height: 8),
-                        Text('Email: ${user.email}'),
-                        Text('Rôle: ${user.role}'),
+                        Text('Email: ${currentUser.email}'),
+                        Text('Rôle: ${currentUser.role}'),
                       ],
                     ),
                   ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Fonctionnalités Administrateur',
+                  'Fonctionnalités Administration',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
@@ -59,34 +58,52 @@ class AdminHomeScreen extends ConsumerWidget {
                   title: 'Gestion des utilisateurs',
                   icon: Icons.people,
                   onTap: () {
-                    // Navigation vers la gestion des utilisateurs
+                    Navigator.of(context).pushNamed(AppRoutes.usersList);
                   },
                 ),
                 _buildFeatureCard(
                   context,
-                  title: 'Rapports',
-                  icon: Icons.analytics,
+                  title: 'Gestion des cours',
+                  icon: Icons.class_,
                   onTap: () {
-                    // Navigation vers les rapports
+                    Navigator.of(context).pushNamed(AppRoutes.coursesList);
                   },
                 ),
                 _buildFeatureCard(
                   context,
-                  title: 'Paramètres',
-                  icon: Icons.settings,
+                  title: 'Gestion des notes',
+                  icon: Icons.grading,
                   onTap: () {
-                    // Navigation vers les paramètres
+                    Navigator.of(context).pushNamed(AppRoutes.teacherGrades);
+                  },
+                ),
+                _buildFeatureCard(
+                  context,
+                  title: 'Réclamations',
+                  icon: Icons.feedback,
+                  onTap: () {
+                    Navigator.of(context).pushNamed(AppRoutes.complaints);
+                  },
+                ),
+                _buildFeatureCard(
+                  context,
+                  title: 'Gestion des filières',
+                  icon: Icons.school,
+                  onTap: () {
+                    Navigator.of(context).pushNamed(AppRoutes.filiereList);
+                  },
+                ),
+                _buildFeatureCard(
+                  context,
+                  title: 'Gestion des absences',
+                  icon: Icons.event_busy,
+                  onTap: () {
+                    Navigator.of(context).pushNamed(AppRoutes.absenceList);
                   },
                 ),
               ],
             ),
-          );
-        },
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stackTrace) => Center(
-          child: Text('Erreur: $error'),
-        ),
-      ),
+          ),
     );
   }
 
