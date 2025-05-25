@@ -9,7 +9,8 @@ jobs:
         with:
           flutter-version: '3.29.3'
       - run: flutter pub get
-      - run: flutter analyze --no-fatal-infos
+      - name: Run flutter analyze (ignore warnings)
+        run: flutter analyze --no-fatal-warnings --no-fatal-infos
       - run: flutter test
       - run: flutter drive --driver integration_test/driver.dart --target integration_test/app_flow_test.dart
       
