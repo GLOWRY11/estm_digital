@@ -7,7 +7,7 @@ import '../providers/auth_provider.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
-  const LoginScreen({Key? key}) : super(key: key);
+  const LoginScreen({super.key});
 
   @override
   ConsumerState<LoginScreen> createState() => _LoginScreenState();
@@ -311,21 +311,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Widget _buildDemoAccount(String email, String password, String role) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              '$role: $email / $password',
-              style: const TextStyle(
-                fontSize: 12,
-                fontFamily: 'monospace',
+      padding: const EdgeInsets.symmetric(vertical: 2.0),
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Expanded(
+              child: Text(
+                '$role: $email / $password',
+                style: const TextStyle(
+                  fontSize: 9,
+                  fontFamily: 'monospace',
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
             ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.copy, size: 16),
-            onPressed: () async {
+            SizedBox(
+              width: 40,
+              height: 40,
+              child: IconButton(
+                icon: const Icon(Icons.copy, size: 14),
+                onPressed: () async {
               // Copier dans le presse-papier
               await Clipboard.setData(ClipboardData(text: '$email:$password'));
               
@@ -336,7 +343,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text('Compte $role copié dans le presse-papier et rempli automatiquement'),
+                    content: Text('Compte $role copié et rempli'),
                     duration: const Duration(seconds: 3),
                     action: SnackBarAction(
                       label: 'Connexion',
@@ -347,8 +354,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               }
             },
             tooltip: 'Copier les identifiants',
-          ),
-        ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
