@@ -2,14 +2,10 @@ import '../../domain/entities/room_entity.dart';
 
 class RoomModel extends RoomEntity {
   const RoomModel({
-    required String id,
-    required String name,
-    required int capacity,
-  }) : super(
-          id: id,
-          name: name,
-          capacity: capacity,
-        );
+    required super.id,
+    required super.name,
+    required super.capacity,
+  });
 
   factory RoomModel.fromMap(Map<String, dynamic> map) {
     return RoomModel(

@@ -7,10 +7,10 @@ class SyncStatusWidget extends ConsumerWidget {
   final double size;
 
   const SyncStatusWidget({
-    Key? key,
+    super.key,
     required this.status,
     this.size = 12,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

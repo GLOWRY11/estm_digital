@@ -2,20 +2,13 @@ import '../../domain/entities/session_entity.dart';
 
 class SessionModel extends SessionEntity {
   const SessionModel({
-    required String id,
-    required String course,
-    required String roomId,
-    required String classId,
-    required DateTime start,
-    required DateTime end,
-  }) : super(
-          id: id,
-          course: course,
-          roomId: roomId,
-          classId: classId,
-          start: start,
-          end: end,
-        );
+    required super.id,
+    required super.course,
+    required super.roomId,
+    required super.classId,
+    required super.start,
+    required super.end,
+  });
 
   factory SessionModel.fromMap(Map<String, dynamic> map) {
     return SessionModel(

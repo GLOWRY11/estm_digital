@@ -2,18 +2,12 @@ import '../../domain/entities/absence_entity.dart';
 
 class AbsenceModel extends AbsenceEntity {
   const AbsenceModel({
-    required String id,
-    required String studentId,
-    required DateTime date,
-    required String time,
-    required String status,
-  }) : super(
-          id: id,
-          studentId: studentId,
-          date: date,
-          time: time,
-          status: status,
-        );
+    required super.id,
+    required super.studentId,
+    required super.date,
+    required super.time,
+    required super.status,
+  });
 
   factory AbsenceModel.fromMap(Map<String, dynamic> map) {
     return AbsenceModel(

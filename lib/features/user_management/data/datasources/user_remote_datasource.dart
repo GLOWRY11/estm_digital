@@ -1,5 +1,4 @@
 import 'dart:developer' as developer;
-import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 import '../../../../core/local_database.dart';
 import '../models/class_model.dart';

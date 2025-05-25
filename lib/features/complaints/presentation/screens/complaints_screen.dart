@@ -8,7 +8,7 @@ import '../../domain/models/complaint.dart';
 class ComplaintsScreen extends ConsumerStatefulWidget {
   static const String routeName = '/complaints';
 
-  const ComplaintsScreen({Key? key}) : super(key: key);
+  const ComplaintsScreen({super.key});
 
   @override
   ConsumerState<ComplaintsScreen> createState() => _ComplaintsScreenState();
@@ -32,19 +32,10 @@ class _ComplaintsScreenState extends ConsumerState<ComplaintsScreen> {
       });
 
       final currentUser = ref.read(currentUserProvider);
-      if (currentUser == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Vous devez être connecté pour soumettre une réclamation')),
-        );
-        setState(() {
-          _isSubmitting = false;
-        });
-        return;
-      }
-
+      
       try {
         await ref.read(complaintsNotifierProvider.notifier).addComplaint(
-          currentUser.id,
+          currentUser!.id,
           _complaintController.text,
         );
 

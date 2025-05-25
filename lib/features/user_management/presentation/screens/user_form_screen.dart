@@ -1,18 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
-import '../../../../core/local_database.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/user_service.dart';
 import '../../../auth/domain/entities/user.dart';
 
-class UserFormScreen extends StatefulWidget {
-  final User? user;
+class UserFormScreen extends ConsumerStatefulWidget {
+  final String? userId;
 
-  const UserFormScreen({super.key, this.user});
+  const UserFormScreen({Key? key, this.userId}) : super(key: key);
 
   @override
-  State<UserFormScreen> createState() => _UserFormScreenState();
+  ConsumerState<UserFormScreen> createState() => _UserFormScreenState();
 }
 
-class _UserFormScreenState extends State<UserFormScreen> {
+class _UserFormScreenState extends ConsumerState<UserFormScreen> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -23,34 +24,17 @@ class _UserFormScreenState extends State<UserFormScreen> {
   final _studentIdController = TextEditingController();
 
   String _selectedRole = 'student';
-  bool _isActive = true;
   bool _isLoading = false;
-  final _uuid = const Uuid();
-
-  final List<Map<String, dynamic>> _roles = [
-    {'value': 'student', 'label': 'Étudiant', 'icon': Icons.school},
-    {'value': 'teacher', 'label': 'Enseignant', 'icon': Icons.person},
-    {'value': 'admin', 'label': 'Administrateur', 'icon': Icons.admin_panel_settings},
-  ];
+  bool _isEditing = false;
+  User? _existingUser;
 
   @override
   void initState() {
     super.initState();
-    if (widget.user != null) {
-      _loadUserData();
+    _isEditing = widget.userId != null;
+    if (_isEditing) {
+      _loadUser();
     }
-  }
-
-  void _loadUserData() {
-    final user = widget.user!;
-    _emailController.text = user.email;
-    _displayNameController.text = user.displayName ?? '';
-    _phoneController.text = user.phoneNumber ?? '';
-    _addressController.text = user.address ?? '';
-    _classIdController.text = user.classId ?? '';
-    _studentIdController.text = user.studentId?.toString() ?? '';
-    _selectedRole = user.role;
-    _isActive = user.isActive;
   }
 
   @override
@@ -65,332 +49,356 @@ class _UserFormScreenState extends State<UserFormScreen> {
     super.dispose();
   }
 
-  Future<void> _saveUser() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+  Future<void> _loadUser() async {
+    if (widget.userId == null) return;
 
     setState(() => _isLoading = true);
 
     try {
-      final db = await LocalDatabase.open();
-      final now = DateTime.now().toIso8601String();
-      
-      final userData = {
-        'email': _emailController.text.trim(),
-        'displayName': _displayNameController.text.trim().isEmpty 
-            ? null : _displayNameController.text.trim(),
-        'role': _selectedRole,
-        'phoneNumber': _phoneController.text.trim().isEmpty 
-            ? null : _phoneController.text.trim(),
-        'address': _addressController.text.trim().isEmpty 
-            ? null : _addressController.text.trim(),
-        'classId': _classIdController.text.trim().isEmpty 
-            ? null : _classIdController.text.trim(),
-        'studentId': _studentIdController.text.trim().isEmpty 
-            ? null : int.tryParse(_studentIdController.text.trim()),
-        'isActive': _isActive ? 1 : 0,
-        'lastModifiedAt': now,
-      };
-
-      if (widget.user == null) {
-        // Création d'un nouvel utilisateur
-        if (_passwordController.text.isEmpty) {
-          throw Exception('Le mot de passe est requis pour un nouvel utilisateur');
-        }
-        
-        // Vérifier que l'email n'existe pas déjà
-        final existing = await db.query(
-          'users',
-          where: 'email = ?',
-          whereArgs: [_emailController.text.trim()],
-        );
-        
-        if (existing.isNotEmpty) {
-          throw Exception('Un utilisateur avec cet email existe déjà');
-        }
-
-        userData['id'] = _uuid.v4();
-        userData['password'] = _passwordController.text;
-        userData['createdAt'] = now;
-
-        await db.insert('users', userData);
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Utilisateur créé avec succès')),
-          );
-        }
-      } else {
-        // Modification d'un utilisateur existant
-        if (_passwordController.text.isNotEmpty) {
-          userData['password'] = _passwordController.text;
-        }
-
-        await db.update(
-          'users',
-          userData,
-          where: 'id = ?',
-          whereArgs: [widget.user!.id],
-        );
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Utilisateur modifié avec succès')),
-          );
-        }
-      }
-
-      if (mounted) {
-        Navigator.of(context).pop(true);
+      final user = await UserService.getUserById(widget.userId!);
+      if (user != null) {
+        _existingUser = user;
+        _emailController.text = user.email;
+        _displayNameController.text = user.displayName ?? '';
+        _phoneController.text = user.phoneNumber ?? '';
+        _addressController.text = user.address ?? '';
+        _classIdController.text = user.classId ?? '';
+        _studentIdController.text = user.studentId?.toString() ?? '';
+        _selectedRole = user.role;
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
-        );
-      }
+      _showErrorDialog('Erreur lors du chargement: $e');
     } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
+      setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _saveUser() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _isLoading = true);
+
+    try {
+      if (_isEditing && _existingUser != null) {
+        // Mise à jour
+        final updates = <String, dynamic>{};
+        
+        if (_emailController.text != _existingUser!.email) {
+          updates['email'] = _emailController.text.trim();
+        }
+        
+        if (_passwordController.text.isNotEmpty) {
+          updates['password'] = _passwordController.text;
+        }
+        
+        if (_displayNameController.text != (_existingUser!.displayName ?? '')) {
+          updates['displayName'] = _displayNameController.text.trim().isNotEmpty 
+              ? _displayNameController.text.trim() 
+              : null;
+        }
+        
+        if (_phoneController.text != (_existingUser!.phoneNumber ?? '')) {
+          updates['phoneNumber'] = _phoneController.text.trim().isNotEmpty 
+              ? _phoneController.text.trim() 
+              : null;
+        }
+        
+        if (_addressController.text != (_existingUser!.address ?? '')) {
+          updates['address'] = _addressController.text.trim().isNotEmpty 
+              ? _addressController.text.trim() 
+              : null;
+        }
+        
+        if (_classIdController.text != (_existingUser!.classId ?? '')) {
+          updates['classId'] = _classIdController.text.trim().isNotEmpty 
+              ? _classIdController.text.trim() 
+              : null;
+        }
+        
+        final studentIdText = _studentIdController.text.trim();
+        final newStudentId = studentIdText.isNotEmpty ? int.tryParse(studentIdText) : null;
+        if (newStudentId != _existingUser!.studentId) {
+          updates['studentId'] = newStudentId;
+        }
+
+        if (updates.isNotEmpty) {
+          final success = await UserService.updateUser(widget.userId!, updates);
+          if (success) {
+            _showSuccessMessage('Utilisateur mis à jour avec succès');
+            Navigator.of(context).pop();
+          } else {
+            _showErrorDialog('Erreur lors de la mise à jour');
+          }
+        } else {
+          Navigator.of(context).pop();
+        }
+      } else {
+        // Création
+        final success = await UserService.insertUser(
+          email: _emailController.text.trim(),
+          password: _passwordController.text,
+          role: _selectedRole,
+          displayName: _displayNameController.text.trim().isNotEmpty 
+              ? _displayNameController.text.trim() 
+              : null,
+          phoneNumber: _phoneController.text.trim().isNotEmpty 
+              ? _phoneController.text.trim() 
+              : null,
+          address: _addressController.text.trim().isNotEmpty 
+              ? _addressController.text.trim() 
+              : null,
+          classId: _selectedRole == 'student' && _classIdController.text.trim().isNotEmpty
+              ? _classIdController.text.trim()
+              : null,
+          studentId: _selectedRole == 'student' && _studentIdController.text.trim().isNotEmpty
+              ? int.tryParse(_studentIdController.text.trim())
+              : null,
+        );
+
+        if (success) {
+          _showSuccessMessage('Utilisateur créé avec succès');
+          Navigator.of(context).pop();
+        } else {
+          _showErrorDialog('Erreur lors de la création');
+        }
+      }
+    } catch (e) {
+      _showErrorDialog('Erreur: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Erreur'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccessMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isEditing = widget.user != null;
-    
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    if (_isLoading && _isEditing) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Chargement...')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text(isEditing ? 'Modifier Utilisateur' : 'Nouvel Utilisateur'),
-        actions: [
-          TextButton(
-            onPressed: _isLoading ? null : _saveUser,
-            child: Text(
-              isEditing ? 'MODIFIER' : 'CRÉER',
-              style: TextStyle(
-                color: _isLoading ? Colors.grey : Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
+        title: Text(
+          _isEditing ? 'Modifier Utilisateur' : 'Nouveau Utilisateur',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
       ),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Informations de base
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Informations de base',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _emailController,
-                        decoration: const InputDecoration(
-                          labelText: 'Email *',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.email),
-                        ),
-                        keyboardType: TextInputType.emailAddress,
-                        validator: (value) {
-                          if (value == null || value.isEmpty) {
-                            return 'L\'email est requis';
-                          }
-                          if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(value)) {
-                            return 'Format d\'email invalide';
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _passwordController,
-                        decoration: InputDecoration(
-                          labelText: isEditing ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe *',
-                          border: const OutlineInputBorder(),
-                          prefixIcon: const Icon(Icons.lock),
-                          helperText: isEditing ? 'Laissez vide pour garder l\'actuel' : null,
-                        ),
-                        obscureText: true,
-                        validator: (value) {
-                          if (!isEditing && (value == null || value.isEmpty)) {
-                            return 'Le mot de passe est requis';
-                          }
-                          if (value != null && value.isNotEmpty && value.length < 6) {
-                            return 'Le mot de passe doit contenir au moins 6 caractères';
-                          }
-                          return null;
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _displayNameController,
-                        decoration: const InputDecoration(
-                          labelText: 'Nom d\'affichage',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.person),
-                        ),
-                      ),
-                    ],
+              // Sélection du rôle (seulement pour la création)
+              if (!_isEditing) ...[
+                Text(
+                  'Type de compte',
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(
+                      value: 'student',
+                      label: Text('Étudiant'),
+                      icon: Icon(Icons.school),
+                    ),
+                    ButtonSegment(
+                      value: 'teacher',
+                      label: Text('Enseignant'),
+                      icon: Icon(Icons.person),
+                    ),
+                    ButtonSegment(
+                      value: 'admin',
+                      label: Text('Admin'),
+                      icon: Icon(Icons.admin_panel_settings),
+                    ),
+                  ],
+                  selected: {_selectedRole},
+                  onSelectionChanged: (Set<String> newSelection) {
+                    setState(() {
+                      _selectedRole = newSelection.first;
+                    });
+                  },
+                ),
+                const SizedBox(height: 24),
+              ],
+
+              // Email
+              TextFormField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: 'Email *',
+                  prefixIcon: const Icon(Icons.email),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Email requis';
+                  }
+                  if (!UserService.isValidEmail(value)) {
+                    return 'Email invalide';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Mot de passe
+              TextFormField(
+                controller: _passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: _isEditing ? 'Nouveau mot de passe (optionnel)' : 'Mot de passe *',
+                  prefixIcon: const Icon(Icons.lock),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                validator: (value) {
+                  if (!_isEditing && (value == null || value.isEmpty)) {
+                    return 'Mot de passe requis';
+                  }
+                  if (value != null && value.isNotEmpty && !UserService.isValidPassword(value)) {
+                    return 'Le mot de passe doit contenir au moins 6 caractères';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Nom complet
+              TextFormField(
+                controller: _displayNameController,
+                decoration: InputDecoration(
+                  labelText: 'Nom complet',
+                  prefixIcon: const Icon(Icons.person),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              // Rôle et statut
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Rôle et statut',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Rôle *',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.badge),
-                        ),
-                        value: _selectedRole,
-                        items: _roles.map((role) {
-                          return DropdownMenuItem<String>(
-                            value: role['value'],
-                            child: Row(
-                              children: [
-                                Icon(role['icon'], size: 20),
-                                const SizedBox(width: 8),
-                                Text(role['label']),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedRole = value!;
-                          });
-                        },
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      SwitchListTile(
-                        title: const Text('Compte actif'),
-                        subtitle: Text(_isActive ? 'L\'utilisateur peut se connecter' : 'L\'utilisateur ne peut pas se connecter'),
-                        value: _isActive,
-                        onChanged: (value) {
-                          setState(() {
-                            _isActive = value;
-                          });
-                        },
-                      ),
-                    ],
+              // Téléphone
+              TextFormField(
+                controller: _phoneController,
+                keyboardType: TextInputType.phone,
+                decoration: InputDecoration(
+                  labelText: 'Téléphone',
+                  prefixIcon: const Icon(Icons.phone),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
 
               const SizedBox(height: 16),
 
-              // Informations complémentaires
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Informations complémentaires',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _phoneController,
-                        decoration: const InputDecoration(
-                          labelText: 'Téléphone',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.phone),
-                        ),
-                        keyboardType: TextInputType.phone,
-                      ),
-                      
-                      const SizedBox(height: 16),
-                      
-                      TextFormField(
-                        controller: _addressController,
-                        decoration: const InputDecoration(
-                          labelText: 'Adresse',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.location_on),
-                        ),
-                        maxLines: 2,
-                      ),
-                      
-                      if (_selectedRole == 'student') ...[
-                        const SizedBox(height: 16),
-                        
-                        TextFormField(
-                          controller: _classIdController,
-                          decoration: const InputDecoration(
-                            labelText: 'ID de classe',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.class_),
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 16),
-                        
-                        TextFormField(
-                          controller: _studentIdController,
-                          decoration: const InputDecoration(
-                            labelText: 'Numéro d\'étudiant',
-                            border: OutlineInputBorder(),
-                            prefixIcon: Icon(Icons.numbers),
-                          ),
-                          keyboardType: TextInputType.number,
-                        ),
-                      ],
-                    ],
+              // Adresse
+              TextFormField(
+                controller: _addressController,
+                decoration: InputDecoration(
+                  labelText: 'Adresse',
+                  prefixIcon: const Icon(Icons.location_on),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
 
-              const SizedBox(height: 24),
+              // Champs spécifiques aux étudiants
+              if (_selectedRole == 'student') ...[
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _classIdController,
+                  decoration: InputDecoration(
+                    labelText: 'Classe',
+                    hintText: 'Ex: L3-INFO',
+                    prefixIcon: const Icon(Icons.class_),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                TextFormField(
+                  controller: _studentIdController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: 'Numéro étudiant',
+                    prefixIcon: const Icon(Icons.badge),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  validator: (value) {
+                    if (value != null && value.isNotEmpty) {
+                      if (int.tryParse(value) == null) {
+                        return 'Numéro invalide';
+                      }
+                    }
+                    return null;
+                  },
+                ),
+              ],
 
-              // Boutons d'action
+              const SizedBox(height: 32),
+
+              // Boutons
               Row(
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                      child: const Text('ANNULER'),
+                      onPressed: () => Navigator.of(context).pop(),
+                      child: const Text('Annuler'),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
-                    child: ElevatedButton(
+                    child: FilledButton(
                       onPressed: _isLoading ? null : _saveUser,
                       child: _isLoading
                           ? const SizedBox(
@@ -398,7 +406,7 @@ class _UserFormScreenState extends State<UserFormScreen> {
                               width: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : Text(isEditing ? 'MODIFIER' : 'CRÉER'),
+                          : Text(_isEditing ? 'Modifier' : 'Créer'),
                     ),
                   ),
                 ],

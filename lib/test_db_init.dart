@@ -5,7 +5,7 @@ import 'core/local_database.dart';
 import 'package:uuid/uuid.dart';
 
 class TestDatabaseScreen extends StatefulWidget {
-  const TestDatabaseScreen({Key? key}) : super(key: key);
+  const TestDatabaseScreen({super.key});
 
   @override
   State<TestDatabaseScreen> createState() => _TestDatabaseScreenState();

@@ -21,9 +21,9 @@ class AuthWrapper extends ConsumerWidget {
 
         switch (user.role) {
           case 'student':
-            return StudentHomeScreen(user: user);
+            return const StudentHomeScreen();
           case 'teacher':
-            return TeacherHomeScreen(user: user);
+            return const TeacherHomeScreen();
           case 'admin':
             return AdminHomeScreen();
           default:

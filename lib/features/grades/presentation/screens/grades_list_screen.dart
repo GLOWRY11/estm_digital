@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 class GradesListScreen extends ConsumerWidget {
   static const routeName = '/grades-list';
 
-  const GradesListScreen({Key? key}) : super(key: key);
+  const GradesListScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

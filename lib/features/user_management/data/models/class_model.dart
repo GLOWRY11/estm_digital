@@ -2,18 +2,12 @@ import '../../domain/entities/class_entity.dart';
 
 class ClassModel extends ClassEntity {
   const ClassModel({
-    required String id,
-    required String name,
-    required String description,
-    required int year,
-    required String department,
-  }) : super(
-          id: id,
-          name: name,
-          description: description,
-          year: year,
-          department: department,
-        );
+    required super.id,
+    required super.name,
+    required super.description,
+    required super.year,
+    required super.department,
+  });
 
   factory ClassModel.fromMap(Map<String, dynamic> map) {
     return ClassModel(

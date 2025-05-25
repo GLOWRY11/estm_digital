@@ -1,84 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../domain/entities/user.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../providers/auth_provider.dart';
 import '../widgets/auth_wrapper.dart';
 import '../../../../core/routes/app_routes.dart';
 
 class TeacherHomeScreen extends ConsumerWidget {
-  final User user;
-
-  const TeacherHomeScreen({super.key, required this.user});
+  const TeacherHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: Text('Accueil Enseignant'),
+        title: Text(
+          'Espace Enseignant',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        ),
+        centerTitle: true,
         actions: [
           IconButton(
-            icon: Icon(Icons.logout),
             onPressed: () {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (context) => AuthWrapper()),
+              ref.read(authStateProvider.notifier).logout();
+              Navigator.of(context).pushNamedAndRemoveUntil(
+                '/',
+                (route) => false,
               );
             },
+            icon: const Icon(Icons.logout),
+            tooltip: 'Se déconnecter',
           ),
         ],
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Bienvenue, ${user.displayName ?? user.email}!',
-              style: Theme.of(context).textTheme.headlineSmall,
-            ),
-            const SizedBox(height: 20),
-            Expanded(
-              child: GridView.count(
-                crossAxisCount: 2,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                children: [
-                  _buildFeatureCard(
-                    context,
-                    'Gestion Absences',
-                    Icons.event_busy,
-                    Colors.red,
-                    () {
-                      Navigator.of(context).pushNamed(AppRoutes.absenceList);
-                    },
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    'Gestion Notes',
-                    Icons.grade,
-                    Colors.blue,
-                    () {
-                      Navigator.of(context).pushNamed(AppRoutes.teacherGrades);
-                    },
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    'Mes Cours',
-                    Icons.school,
-                    Colors.green,
-                    () {
-                      Navigator.of(context).pushNamed(AppRoutes.coursesList);
-                    },
-                  ),
-                  _buildFeatureCard(
-                    context,
-                    'Étudiants',
-                    Icons.people,
-                    Colors.orange,
-                    () {
-                      Navigator.of(context).pushNamed(AppRoutes.usersList);
-                    },
-                  ),
-                ],
+            // En-tête de bienvenue
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bienvenue, ${user?.displayName ?? user?.email ?? 'Enseignant'}',
+                      style: theme.textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text('Email: ${user?.email ?? 'Non disponible'}'),
+                    Text('Rôle: ${user?.role ?? 'Enseignant'}'),
+                  ],
+                ),
               ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              'Fonctionnalités Enseignant',
+              style: theme.textTheme.titleLarge,
+            ),
+            const SizedBox(height: 16),
+            _buildFeatureCard(
+              context,
+              title: 'Générateur QR',
+              icon: Icons.qr_code,
+              onTap: () => Navigator.of(context).pushNamed('/qr-generator'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Gestion Absences',
+              icon: Icons.event_busy,
+              onTap: () => Navigator.of(context).pushNamed('/absences'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Mes Cours',
+              icon: Icons.school,
+              onTap: () => Navigator.of(context).pushNamed('/courses'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Gestion Notes',
+              icon: Icons.grade,
+              onTap: () => Navigator.of(context).pushNamed('/teacher-grades'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Emploi du Temps',
+              icon: Icons.schedule,
+              onTap: () => Navigator.of(context).pushNamed('/schedule'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Rapports',
+              icon: Icons.analytics,
+              onTap: () => Navigator.of(context).pushNamed('/reports'),
             ),
           ],
         ),
@@ -87,34 +108,18 @@ class TeacherHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildFeatureCard(
-    BuildContext context,
-    String title,
-    IconData icon,
-    Color color,
-    VoidCallback onTap,
-  ) {
+    BuildContext context, {
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
     return Card(
-      child: InkWell(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: ListTile(
+        leading: Icon(icon, color: Theme.of(context).primaryColor),
+        title: Text(title),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
         onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                icon,
-                size: 48,
-                color: color,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }

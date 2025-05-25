@@ -1,28 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:sqflite/sqflite.dart';
-import '../../../../core/local_database.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../../../../core/services/user_service.dart';
 import '../../../auth/domain/entities/user.dart';
-import 'user_form_screen.dart';
 
 class UsersListScreen extends ConsumerStatefulWidget {
-  const UsersListScreen({super.key});
+  const UsersListScreen({Key? key}) : super(key: key);
 
   @override
   ConsumerState<UsersListScreen> createState() => _UsersListScreenState();
 }
 
 class _UsersListScreenState extends ConsumerState<UsersListScreen> {
-  List<User> _users = [];
-  bool _isLoading = true;
-  String _selectedRole = 'all';
-
-  final List<Map<String, dynamic>> _roleFilters = [
-    {'value': 'all', 'label': 'Tous les utilisateurs', 'icon': Icons.people},
-    {'value': 'student', 'label': 'Étudiants', 'icon': Icons.school},
-    {'value': 'teacher', 'label': 'Enseignants', 'icon': Icons.person},
-    {'value': 'admin', 'label': 'Administrateurs', 'icon': Icons.admin_panel_settings},
-  ];
+  List<User> users = [];
+  bool isLoading = true;
+  String searchQuery = '';
+  String selectedRole = 'all';
+  
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -30,327 +25,317 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
     _loadUsers();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadUsers() async {
-    setState(() => _isLoading = true);
+    setState(() => isLoading = true);
+    
     try {
-      final db = await LocalDatabase.open();
-      String query = 'SELECT * FROM users WHERE 1=1';
-      List<dynamic> whereArgs = [];
-
-      if (_selectedRole != 'all') {
-        query += ' AND role = ?';
-        whereArgs.add(_selectedRole);
-      }
-
-      query += ' ORDER BY createdAt DESC';
-
-      final result = await db.rawQuery(query, whereArgs);
-      final users = result.map((userData) {
-        final now = DateTime.now();
-        return User(
-          id: userData['id'] as String,
-          email: userData['email'] as String,
-          displayName: userData['displayName'] as String?,
-          role: userData['role'] as String,
-          phoneNumber: userData['phoneNumber'] as String?,
-          address: userData['address'] as String?,
-          profileImageUrl: userData['profileImageUrl'] as String?,
-          classId: userData['classId'] as String?,
-          studentId: userData['studentId'] as int?,
-          isActive: userData['isActive'] == 1,
-          createdAt: userData['createdAt'] != null
-              ? DateTime.parse(userData['createdAt'] as String)
-              : now,
-          lastModifiedAt: userData['lastModifiedAt'] != null
-              ? DateTime.parse(userData['lastModifiedAt'] as String)
-              : null,
-        );
-      }).toList();
-
+      final loadedUsers = await UserService.queryUsers();
       setState(() {
-        _users = users;
-        _isLoading = false;
+        users = loadedUsers;
+        isLoading = false;
       });
     } catch (e) {
-      setState(() => _isLoading = false);
+      setState(() => isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors du chargement: $e')),
+          SnackBar(content: Text('Erreur: $e')),
         );
       }
     }
   }
 
-  Future<void> _deleteUser(User user) async {
-    try {
-      final db = await LocalDatabase.open();
-      await db.delete('users', where: 'id = ?', whereArgs: [user.id]);
+  List<User> get filteredUsers {
+    return users.where((user) {
+      final matchesSearch = searchQuery.isEmpty ||
+          user.email.toLowerCase().contains(searchQuery.toLowerCase()) ||
+          (user.displayName?.toLowerCase().contains(searchQuery.toLowerCase()) ?? false);
       
-      setState(() {
-        _users.removeWhere((u) => u.id == user.id);
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Utilisateur "${user.email}" supprimé')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la suppression: $e')),
-        );
-      }
-    }
+      final matchesRole = selectedRole == 'all' || user.role == selectedRole;
+      
+      return matchesSearch && matchesRole;
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       appBar: AppBar(
-        title: const Text('Gestion des Utilisateurs'),
-        actions: [
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.filter_list),
-            tooltip: 'Filtrer par rôle',
-            onSelected: (value) {
-              setState(() => _selectedRole = value);
-              _loadUsers();
-            },
-            itemBuilder: (context) => _roleFilters.map((filter) {
-              return PopupMenuItem<String>(
-                value: filter['value'],
-                child: Row(
-                  children: [
-                    Icon(filter['icon'], size: 20),
-                    const SizedBox(width: 8),
-                    Text(filter['label']),
-                    if (_selectedRole == filter['value'])
-                      const Padding(
-                        padding: EdgeInsets.only(left: 8),
-                        child: Icon(Icons.check, size: 16),
-                      ),
-                  ],
-                ),
-              );
-            }).toList(),
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadUsers,
-            tooltip: 'Actualiser',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _users.isEmpty
-              ? _buildEmptyState()
-              : _buildUsersList(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => _navigateToUserForm(),
-        tooltip: 'Ajouter un utilisateur',
-        child: const Icon(Icons.person_add),
-      ),
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            _selectedRole == 'all' ? Icons.people : _roleFilters
-                .firstWhere((f) => f['value'] == _selectedRole)['icon'],
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _selectedRole == 'all' 
-                ? 'Aucun utilisateur enregistré'
-                : 'Aucun ${_roleFilters.firstWhere((f) => f['value'] == _selectedRole)['label'].toLowerCase()}',
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton.icon(
-            onPressed: () => _navigateToUserForm(),
-            icon: const Icon(Icons.person_add),
-            label: const Text('Ajouter un utilisateur'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUsersList() {
-    return Column(
-      children: [
-        // Statistiques
-        Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryContainer,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildStatChip('Total', _users.length, Icons.people),
-              _buildStatChip('Actifs', _users.where((u) => u.isActive).length, Icons.check_circle),
-              _buildStatChip('Inactifs', _users.where((u) => !u.isActive).length, Icons.cancel),
-            ],
-          ),
+        title: Text(
+          'Gestion Utilisateurs',
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
-        
-        // Liste des utilisateurs
-        Expanded(
-          child: ListView.builder(
-            itemCount: _users.length,
-            itemBuilder: (context, index) {
-              final user = _users[index];
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                child: ListTile(
-                  leading: CircleAvatar(
-                    backgroundColor: _getRoleColor(user.role),
-                    child: Icon(
-                      _getRoleIcon(user.role),
-                      color: Colors.white,
+        centerTitle: true,
+        actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.of(context).pushNamed('/user_form').then((_) => _loadUsers());
+            },
+            icon: const Icon(Icons.person_add),
+            tooltip: 'Ajouter un utilisateur',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // Barre de recherche et filtres
+          Container(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                // Recherche
+                TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher par nom ou email...',
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    suffixIcon: searchQuery.isNotEmpty
+                        ? IconButton(
+                            onPressed: () {
+                              _searchController.clear();
+                              setState(() => searchQuery = '');
+                            },
+                            icon: const Icon(Icons.clear),
+                          )
+                        : null,
                   ),
-                  title: Text(
-                    user.displayName ?? user.email,
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      decoration: user.isActive ? null : TextDecoration.lineThrough,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  onChanged: (value) {
+                    setState(() => searchQuery = value);
+                  },
+                ),
+                
+                const SizedBox(height: 12),
+                
+                // Filtre par rôle
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
                     children: [
-                      Text(user.email),
-                      Text(
-                        _getRoleLabel(user.role),
-                        style: TextStyle(
-                          color: _getRoleColor(user.role),
-                          fontWeight: FontWeight.w500,
+                      _buildRoleChip('all', 'Tous', Icons.people),
+                      const SizedBox(width: 8),
+                      _buildRoleChip('student', 'Étudiants', Icons.school),
+                      const SizedBox(width: 8),
+                      _buildRoleChip('teacher', 'Enseignants', Icons.person),
+                      const SizedBox(width: 8),
+                      _buildRoleChip('admin', 'Admins', Icons.admin_panel_settings),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Liste des utilisateurs
+          Expanded(
+            child: isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : filteredUsers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.people_outline,
+                              size: 64,
+                              color: colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              searchQuery.isNotEmpty || selectedRole != 'all'
+                                  ? 'Aucun utilisateur trouvé'
+                                  : 'Aucun utilisateur',
+                              style: GoogleFonts.roboto(
+                                fontSize: 16,
+                                color: colorScheme.onSurface.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : RefreshIndicator(
+                        onRefresh: _loadUsers,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                          itemCount: filteredUsers.length,
+                          itemBuilder: (context, index) {
+                            final user = filteredUsers[index];
+                            return Card(
+                              margin: const EdgeInsets.only(bottom: 12.0),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.all(16.0),
+                                leading: CircleAvatar(
+                                  backgroundColor: _getRoleColor(user.role).withValues(alpha: 0.1),
+                                  child: Text(
+                                    (user.displayName?.isNotEmpty == true
+                                        ? user.displayName!.substring(0, 1)
+                                        : user.email.substring(0, 1)).toUpperCase(),
+                                    style: GoogleFonts.poppins(
+                                      fontWeight: FontWeight.bold,
+                                      color: _getRoleColor(user.role),
+                                    ),
+                                  ),
+                                ),
+                                title: Text(
+                                  user.displayName ?? user.email,
+                                  style: GoogleFonts.poppins(
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (user.displayName != null) ...[
+                                      Text(
+                                        user.email,
+                                        style: GoogleFonts.roboto(fontSize: 12),
+                                      ),
+                                      const SizedBox(height: 4),
+                                    ],
+                                    Row(
+                                      children: [
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
+                                            vertical: 2,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            color: _getRoleColor(user.role).withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: Text(
+                                            _getRoleLabel(user.role),
+                                            style: GoogleFonts.roboto(
+                                              fontSize: 11,
+                                              fontWeight: FontWeight.w500,
+                                              color: _getRoleColor(user.role),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        if (!user.isActive)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 2,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: Colors.red.withValues(alpha: 0.1),
+                                              borderRadius: BorderRadius.circular(12),
+                                            ),
+                                            child: Text(
+                                              'Inactif',
+                                              style: GoogleFonts.roboto(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w500,
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                trailing: PopupMenuButton<String>(
+                                  onSelected: (value) => _handleUserAction(value, user),
+                                  itemBuilder: (context) => [
+                                    const PopupMenuItem(
+                                      value: 'view',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.visibility),
+                                          SizedBox(width: 8),
+                                          Text('Voir détails'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'edit',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.edit),
+                                          SizedBox(width: 8),
+                                          Text('Modifier'),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem(
+                                      value: user.isActive ? 'deactivate' : 'activate',
+                                      child: Row(
+                                        children: [
+                                          Icon(user.isActive ? Icons.block : Icons.check_circle),
+                                          const SizedBox(width: 8),
+                                          Text(user.isActive ? 'Désactiver' : 'Activer'),
+                                        ],
+                                      ),
+                                    ),
+                                    const PopupMenuItem(
+                                      value: 'delete',
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.delete, color: Colors.red),
+                                          SizedBox(width: 8),
+                                          Text('Supprimer', style: TextStyle(color: Colors.red)),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                onTap: () => _handleUserAction('view', user),
+                              ),
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (!user.isActive)
-                        Icon(Icons.pause_circle, color: Colors.orange[600]),
-                      PopupMenuButton<String>(
-                        onSelected: (action) => _handleUserAction(action, user),
-                        itemBuilder: (context) => [
-                          const PopupMenuItem(
-                            value: 'view',
-                            child: Row(
-                              children: [
-                                Icon(Icons.visibility),
-                                SizedBox(width: 8),
-                                Text('Voir détails'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'edit',
-                            child: Row(
-                              children: [
-                                Icon(Icons.edit),
-                                SizedBox(width: 8),
-                                Text('Modifier'),
-                              ],
-                            ),
-                          ),
-                          PopupMenuItem(
-                            value: user.isActive ? 'deactivate' : 'activate',
-                            child: Row(
-                              children: [
-                                Icon(user.isActive ? Icons.pause : Icons.play_arrow),
-                                const SizedBox(width: 8),
-                                Text(user.isActive ? 'Désactiver' : 'Activer'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem(
-                            value: 'delete',
-                            child: Row(
-                              children: [
-                                Icon(Icons.delete, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Supprimer', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  onTap: () => _showUserDetails(user),
-                ),
-              );
-            },
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  Widget _buildStatChip(String label, int count, IconData icon) {
-    return Column(
-      children: [
-        Icon(icon, size: 24),
-        const SizedBox(height: 4),
-        Text(
-          count.toString(),
-          style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
-        Text(label, style: const TextStyle(fontSize: 12)),
-      ],
+  Widget _buildRoleChip(String role, String label, IconData icon) {
+    final isSelected = selectedRole == role;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return FilterChip(
+      selected: isSelected,
+      label: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16),
+          const SizedBox(width: 4),
+          Text(label),
+        ],
+      ),
+      onSelected: (selected) {
+        setState(() {
+          selectedRole = role;
+        });
+      },
     );
-  }
-
-  Color _getRoleColor(String role) {
-    switch (role) {
-      case 'admin': return Colors.red;
-      case 'teacher': return Colors.blue;
-      case 'student': return Colors.green;
-      default: return Colors.grey;
-    }
-  }
-
-  IconData _getRoleIcon(String role) {
-    switch (role) {
-      case 'admin': return Icons.admin_panel_settings;
-      case 'teacher': return Icons.person;
-      case 'student': return Icons.school;
-      default: return Icons.person;
-    }
-  }
-
-  String _getRoleLabel(String role) {
-    switch (role) {
-      case 'admin': return 'Administrateur';
-      case 'teacher': return 'Enseignant';
-      case 'student': return 'Étudiant';
-      default: return role;
-    }
   }
 
   void _handleUserAction(String action, User user) {
     switch (action) {
       case 'view':
-        _showUserDetails(user);
+        Navigator.of(context).pushNamed('/user_detail', arguments: user.id);
         break;
       case 'edit':
-        _navigateToUserForm(user: user);
+        Navigator.of(context)
+            .pushNamed('/user_form', arguments: user.id)
+            .then((_) => _loadUsers());
         break;
       case 'activate':
       case 'deactivate':
@@ -362,95 +347,26 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
     }
   }
 
-  void _showUserDetails(User user) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Détails - ${user.displayName ?? user.email}'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDetailRow('Email', user.email),
-              _buildDetailRow('Rôle', _getRoleLabel(user.role)),
-              _buildDetailRow('Statut', user.isActive ? 'Actif' : 'Inactif'),
-              if (user.phoneNumber != null)
-                _buildDetailRow('Téléphone', user.phoneNumber!),
-              if (user.address != null)
-                _buildDetailRow('Adresse', user.address!),
-              if (user.classId != null)
-                _buildDetailRow('Classe', user.classId!),
-              if (user.studentId != null)
-                _buildDetailRow('ID Étudiant', user.studentId.toString()),
-              _buildDetailRow('Créé le', user.createdAt.toString().split(' ')[0]),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Fermer'),
-          ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _navigateToUserForm(user: user);
-            },
-            icon: const Icon(Icons.edit),
-            label: const Text('Modifier'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(child: Text(value)),
-        ],
-      ),
-    );
-  }
-
   Future<void> _toggleUserStatus(User user) async {
     try {
-      final db = await LocalDatabase.open();
-      await db.update(
-        'users',
-        {'isActive': user.isActive ? 0 : 1},
-        where: 'id = ?',
-        whereArgs: [user.id],
-      );
+      final success = await UserService.updateUser(user.id, {
+        'isActive': user.isActive ? 0 : 1,
+      });
       
-      _loadUsers();
-      
-      if (mounted) {
+      if (success) {
+        _loadUsers();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Utilisateur ${user.isActive ? 'désactivé' : 'activé'}',
+              user.isActive ? 'Utilisateur désactivé' : 'Utilisateur activé',
             ),
           ),
         );
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e')),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
     }
   }
 
@@ -458,37 +374,65 @@ class _UsersListScreenState extends ConsumerState<UsersListScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Confirmation'),
-        content: Text(
-          'Êtes-vous sûr de vouloir supprimer l\'utilisateur "${user.displayName ?? user.email}" ?\n\nCette action est irréversible.',
-        ),
+        title: const Text('Confirmer la suppression'),
+        content: Text('Êtes-vous sûr de vouloir supprimer ${user.displayName ?? user.email} ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
             child: const Text('Annuler'),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () {
               Navigator.of(context).pop();
               _deleteUser(user);
             },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer', style: TextStyle(color: Colors.white)),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
     );
   }
 
-  void _navigateToUserForm({User? user}) async {
-    final result = await Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => UserFormScreen(user: user),
-      ),
-    );
-    
-    if (result == true) {
-      _loadUsers();
+  Future<void> _deleteUser(User user) async {
+    try {
+      final success = await UserService.deleteUser(user.id);
+      if (success) {
+        _loadUsers();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Utilisateur supprimé')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e')),
+      );
+    }
+  }
+
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case 'admin':
+        return Colors.red;
+      case 'teacher':
+        return Colors.blue;
+      case 'student':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String _getRoleLabel(String role) {
+    switch (role) {
+      case 'admin':
+        return 'Admin';
+      case 'teacher':
+        return 'Enseignant';
+      case 'student':
+        return 'Étudiant';
+      default:
+        return role;
     }
   }
 } 

@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../providers/grades_providers.dart';
 import 'grade_edit_screen.dart';
 
 class TeacherGradesScreen extends ConsumerStatefulWidget {
   static const routeName = '/teacher-grades';
 
-  const TeacherGradesScreen({Key? key}) : super(key: key);
+  const TeacherGradesScreen({super.key});
 
   @override
   _TeacherGradesScreenState createState() => _TeacherGradesScreenState();
@@ -14,7 +13,7 @@ class TeacherGradesScreen extends ConsumerStatefulWidget {
 
 class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
   // Liste des étudiants avec leurs notes (données simulées)
-  List<Map<String, dynamic>> _students = [
+  final List<Map<String, dynamic>> _students = [
     {
       'id': 'student1',
       'name': 'Fatou Diop',
@@ -82,7 +81,7 @@ class _TeacherGradesScreenState extends ConsumerState<TeacherGradesScreen> {
   ];
 
   String _selectedClass = 'Tous';
-  List<String> _classes = ['Tous', 'Licence 1 Informatique', 'Master 1 Réseaux'];
+  final List<String> _classes = ['Tous', 'Licence 1 Informatique', 'Master 1 Réseaux'];
 
   @override
   Widget build(BuildContext context) {

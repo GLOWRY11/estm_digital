@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:estm_digital/main.dart';
 import 'package:estm_digital/features/auth/domain/entities/user.dart';
 import 'package:estm_digital/features/auth/presentation/providers/auth_providers.dart';
-import 'package:estm_digital/features/complaints/domain/models/complaint.dart';
 import 'package:estm_digital/features/complaints/presentation/screens/complaints_screen.dart';
 
 void main() {

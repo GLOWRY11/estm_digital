@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../../core/services/grade_service.dart';
 
 class GradeEditScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> initialGrade;
   final String studentName;
 
   const GradeEditScreen({
-    Key? key,
+    super.key,
     required this.initialGrade,
     required this.studentName,
-  }) : super(key: key);
+  });
 
   @override
   _GradeEditScreenState createState() => _GradeEditScreenState();
@@ -32,7 +33,7 @@ class _GradeEditScreenState extends ConsumerState<GradeEditScreen> {
       text: widget.initialGrade['final'].toString(),
     );
     _commentController = TextEditingController(
-      text: widget.initialGrade['comment'] as String,
+      text: widget.initialGrade['comment'] as String? ?? '',
     );
     _calculateAverage();
   }
@@ -65,23 +66,63 @@ class _GradeEditScreenState extends ConsumerState<GradeEditScreen> {
     });
 
     try {
-      // Simuler un délai de sauvegarde
-      await Future.delayed(const Duration(seconds: 1));
-      
-      // En situation réelle, nous enregistrerions les modifications dans la base de données
-      
-      // Retourner les données modifiées
-      Navigator.pop(context, {
-        ...widget.initialGrade,
-        'midterm': double.parse(_midtermController.text),
-        'final': double.parse(_finalController.text),
-        'average': _average,
-        'comment': _commentController.text,
-      });
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e')),
+      final midterm = double.parse(_midtermController.text);
+      final final_ = double.parse(_finalController.text);
+      final comment = _commentController.text.trim();
+
+      // Validation des notes
+      if (midterm < 0 || midterm > 20) {
+        throw Exception('La note partiel doit être entre 0 et 20');
+      }
+      if (final_ < 0 || final_ > 20) {
+        throw Exception('La note finale doit être entre 0 et 20');
+      }
+
+      final gradeId = widget.initialGrade['id'] ?? widget.initialGrade['gradeId'];
+      if (gradeId == null) {
+        throw Exception('ID de la note non trouvé');
+      }
+
+      // Mettre à jour la note via le service
+      final success = await GradeService.updateGrade(
+        gradeId: gradeId.toString(),
+        midterm: midterm,
+        final_: final_,
+        comment: comment.isEmpty ? null : comment,
       );
+
+      if (!success) {
+        throw Exception('Aucune modification détectée');
+      }
+
+      // Créer les nouvelles données à retourner
+      final updatedGrade = Map<String, dynamic>.from(widget.initialGrade);
+      updatedGrade['midterm'] = midterm;
+      updatedGrade['final'] = final_;
+      updatedGrade['average'] = _average;
+      updatedGrade['comment'] = comment;
+
+      if (mounted) {
+        // Afficher un message de succès
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Note mise à jour avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Retourner les données mises à jour
+        Navigator.of(context).pop(updatedGrade);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {

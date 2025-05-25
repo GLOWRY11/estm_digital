@@ -11,11 +11,11 @@ class ResponsiveLayout extends StatelessWidget {
   static const tabletBreakpoint = 900;
 
   const ResponsiveLayout({
-    Key? key,
+    super.key,
     required this.mobileLayout,
     this.tabletLayout,
     this.desktopLayout,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -80,13 +80,13 @@ class TwoColumnLayout extends StatelessWidget {
   final double spacing;
 
   const TwoColumnLayout({
-    Key? key,
+    super.key,
     required this.leftColumn,
     required this.rightColumn,
     this.leftFlex = 1,
     this.rightFlex = 1,
     this.spacing = 16.0,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

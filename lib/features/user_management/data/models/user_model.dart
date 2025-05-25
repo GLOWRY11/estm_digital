@@ -2,34 +2,20 @@ import '../../domain/entities/user_entity.dart';
 
 class ExtendedUserModel extends ExtendedUserEntity {
   const ExtendedUserModel({
-    required String uid,
-    required String email,
-    String? displayName,
-    required String role,
-    String? phoneNumber,
-    String? address,
-    String? profileImageUrl,
-    String? classId,
-    DateTime? dateOfBirth,
-    int? studentId,
-    bool isActive = true,
-    required DateTime createdAt,
-    DateTime? lastModifiedAt,
-  }) : super(
-          uid: uid,
-          email: email,
-          displayName: displayName,
-          role: role,
-          phoneNumber: phoneNumber,
-          address: address,
-          profileImageUrl: profileImageUrl,
-          classId: classId,
-          dateOfBirth: dateOfBirth,
-          studentId: studentId,
-          isActive: isActive,
-          createdAt: createdAt,
-          lastModifiedAt: lastModifiedAt,
-        );
+    required super.uid,
+    required super.email,
+    super.displayName,
+    required super.role,
+    super.phoneNumber,
+    super.address,
+    super.profileImageUrl,
+    super.classId,
+    super.dateOfBirth,
+    super.studentId,
+    super.isActive,
+    required super.createdAt,
+    super.lastModifiedAt,
+  });
 
   factory ExtendedUserModel.fromMap(Map<String, dynamic> map) {
     return ExtendedUserModel(

@@ -12,6 +12,7 @@ class User {
   final bool isActive;
   final DateTime createdAt;
   final DateTime? lastModifiedAt;
+  final DateTime? lastLoginAt;
 
   const User({
     required this.id,
@@ -27,6 +28,7 @@ class User {
     required this.isActive,
     required this.createdAt,
     this.lastModifiedAt,
+    this.lastLoginAt,
   });
 
   User copyWith({
@@ -43,6 +45,7 @@ class User {
     bool? isActive,
     DateTime? createdAt,
     DateTime? lastModifiedAt,
+    DateTime? lastLoginAt,
   }) {
     return User(
       id: id ?? this.id,
@@ -58,6 +61,7 @@ class User {
       isActive: isActive ?? this.isActive,
       createdAt: createdAt ?? this.createdAt,
       lastModifiedAt: lastModifiedAt ?? this.lastModifiedAt,
+      lastLoginAt: lastLoginAt ?? this.lastLoginAt,
     );
   }
 

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'package:sqflite/sqflite.dart';
 import 'dart:developer' as developer;
 import '../../../../core/local_database.dart';
 import '../../domain/entities/user.dart';

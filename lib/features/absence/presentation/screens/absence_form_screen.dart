@@ -2,6 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:estm_digital/features/absence/domain/absence_model.dart';
 import 'package:estm_digital/features/absence/data/absence_service.dart';
 import 'package:intl/intl.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AbsenceFormScreen extends StatefulWidget {
   final Absence? absence;
@@ -14,12 +22,14 @@ class AbsenceFormScreen extends StatefulWidget {
 
 class _AbsenceFormScreenState extends State<AbsenceFormScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _qrKey = GlobalKey();
   final _absenceService = AbsenceService();
   
   bool _isPresent = true;
   late DateTime _date;
   TimeOfDay? _startTime;
   TimeOfDay? _endTime;
+  bool _showQrOption = false;
   
   final TextEditingController _etudiantIdController = TextEditingController();
   final TextEditingController _dateController = TextEditingController();
@@ -156,6 +166,84 @@ class _AbsenceFormScreenState extends State<AbsenceFormScreen> {
               
               const SizedBox(height: 24),
               
+              // Option pour afficher/masquer le QR code
+              if (!_showQrOption)
+                OutlinedButton.icon(
+                  onPressed: () {
+                    setState(() {
+                      _showQrOption = true;
+                    });
+                  },
+                  icon: const Icon(Icons.qr_code),
+                  label: const Text('Afficher QR Code'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              
+              // QR Code et bouton de partage
+              if (_showQrOption) ...[
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      children: [
+                        const Text(
+                          'QR Code de l\'absence',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        RepaintBoundary(
+                          key: _qrKey,
+                          child: Container(
+                            color: Colors.white,
+                            padding: const EdgeInsets.all(16),
+                            child: QrImageView(
+                              data: _generateQrData(),
+                              version: QrVersions.auto,
+                              size: 200.0,
+                              backgroundColor: Colors.white,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: ElevatedButton.icon(
+                                onPressed: _shareQrCode,
+                                icon: const Icon(Icons.share),
+                                label: const Text('Partager QR'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  setState(() {
+                                    _showQrOption = false;
+                                  });
+                                },
+                                icon: const Icon(Icons.close),
+                                label: const Text('Masquer'),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+              
               // Bouton de sauvegarde
               ElevatedButton(
                 onPressed: _saveAbsence,
@@ -274,6 +362,66 @@ class _AbsenceFormScreenState extends State<AbsenceFormScreen> {
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  String _generateQrData() {
+    return jsonEncode({
+      'type': 'absence_record',
+      'etudiantId': int.tryParse(_etudiantIdController.text) ?? 0,
+      'date': _dateController.text,
+      'startTime': _startTimeController.text,
+      'endTime': _endTimeController.text,
+      'isPresent': _isPresent,
+      'timestamp': DateTime.now().millisecondsSinceEpoch,
+    });
+  }
+
+  Future<void> _shareQrCode() async {
+    try {
+      // Capturer le widget QR en image
+      RenderRepaintBoundary? boundary = _qrKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) {
+        throw Exception('QR Code non trouvé pour la capture');
+      }
+
+      // Convertir en image
+      ui.Image image = await boundary.toImage(pixelRatio: 3.0);
+      ByteData? byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) {
+        throw Exception('Erreur lors de la conversion de l\'image');
+      }
+
+      Uint8List pngBytes = byteData.buffer.asUint8List();
+
+      // Créer un fichier temporaire
+      final Directory tempDir = await getTemporaryDirectory();
+      final String fileName = 'qr_absence_${DateTime.now().millisecondsSinceEpoch}.png';
+      final File tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsBytes(pngBytes);
+
+      // Partager le fichier
+      await Share.shareXFiles([XFile(tempFile.path)], 
+        text: 'QR Code - Enregistrement d\'absence\nDate: ${_dateController.text}\nÉtudiant: ${_etudiantIdController.text}');
+
+      // Afficher un message de succès
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('QR Code partagé avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du partage: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

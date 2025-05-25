@@ -16,6 +16,7 @@ class AbsencesListScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final currentUser = ref.watch(currentUserProvider);
     final theme = Theme.of(context);
+    final isTeacher = currentUser?.role == 'teacher';
 
     return Scaffold(
       appBar: AppBar(
@@ -35,7 +36,7 @@ class AbsencesListScreen extends ConsumerWidget {
               child: Text('Vous devez être connecté pour voir les absences'),
             )
           : _buildAbsencesList(context, ref, currentUser, theme),
-      floatingActionButton: currentUser?.role == 'teacher'
+      floatingActionButton: isTeacher
           ? FloatingActionButton(
               onPressed: () {
                 Navigator.of(context).pushNamed(AppRoutes.qrScanner);
@@ -51,101 +52,153 @@ class AbsencesListScreen extends ConsumerWidget {
     final absences = ref.watch(studentAbsencesProvider(user.id));
 
     return absences.when(
-      data: (List<AbsenceEntity> absencesList) {
+      data: (absencesList) {
         if (absencesList.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.check_circle_outline,
-                  size: 64,
-                  color: Colors.green,
+                Icon(
+                  Icons.event_busy,
+                  size: 80,
+                  color: Colors.grey[400],
                 ),
                 const SizedBox(height: 16),
                 Text(
                   'Aucune absence enregistrée',
                   style: theme.textTheme.titleLarge,
                 ),
-                const SizedBox(height: 8),
-                Text(
-                  user.role == 'student'
-                      ? 'Vous êtes à jour dans vos présences'
-                      : 'Aucun étudiant absent pour le moment',
-                  style: theme.textTheme.bodyMedium,
-                ),
+                if (user.role == 'teacher') ...[
+                  const SizedBox(height: 16),
+                  ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).pushNamed(AppRoutes.qrScanner);
+                    },
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text('Scanner QR Code'),
+                  ),
+                ],
               ],
             ),
           );
         }
 
         return ListView.builder(
+          padding: const EdgeInsets.all(16.0),
           itemCount: absencesList.length,
           itemBuilder: (context, index) {
             final absence = absencesList[index];
-            final date = DateFormat('dd/MM/yyyy').format(absence.date);
-            
-            return Card(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: absence.status == 'synced'
-                      ? Colors.green
-                      : Colors.orange,
-                  child: Icon(
-                    absence.status == 'synced'
-                        ? Icons.cloud_done
-                        : Icons.cloud_off,
-                    color: Colors.white,
-                  ),
-                ),
-                title: Text('Présence enregistrée'),
-                subtitle: Text('Date: $date à ${absence.time}'),
-                trailing: Chip(
-                  label: Text(
-                    absence.status == 'synced' ? 'Synchronisé' : 'Hors ligne',
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                    ),
-                  ),
-                  backgroundColor: absence.status == 'synced'
-                      ? Colors.green
-                      : Colors.orange,
-                ),
-                onTap: () {
-                  // Afficher les détails de l'absence
-                  showDialog(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Détails de la présence'),
-                      content: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text('Date: $date'),
-                          Text('Heure: ${absence.time}'),
-                          Text('Statut: ${absence.status == 'synced' ? 'Synchronisé' : 'Hors ligne'}'),
-                          Text('ID Étudiant: ${absence.studentId}'),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: const Text('Fermer'),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            );
+            return _buildAbsenceCard(context, absence, theme, user.role == 'teacher');
           },
         );
       },
       loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => Center(
-        child: Text('Erreur: $error'),
+      error: (error, stackTrace) => Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error, size: 80, color: Colors.red),
+            const SizedBox(height: 16),
+            Text('Erreur: ${error.toString()}'),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => ref.refresh(studentAbsencesProvider(user.id)),
+              child: const Text('Réessayer'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAbsenceCard(BuildContext context, AbsenceEntity absence, ThemeData theme, bool isTeacher) {
+    final dateFormat = DateFormat('dd/MM/yyyy');
+    final isPresent = absence.status == 'synced';
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16.0),
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isPresent ? Colors.green : Colors.orange,
+          child: Icon(
+            isPresent ? Icons.check : Icons.cloud_off,
+            color: Colors.white,
+          ),
+        ),
+        title: Text(
+          isPresent ? 'Présence Synchronisée' : 'En attente de synchronisation',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: isPresent ? Colors.green : Colors.orange,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Date: ${dateFormat.format(absence.date)}'),
+            Text('Heure: ${absence.time}'),
+            Text('Statut: ${absence.status}'),
+          ],
+        ),
+        trailing: isTeacher
+            ? PopupMenuButton<String>(
+                onSelected: (value) {
+                  switch (value) {
+                    case 'edit':
+                      // TODO: Éditer l'absence
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Édition d\'absence - À implémenter')),
+                      );
+                      break;
+                    case 'delete':
+                      // TODO: Supprimer l'absence
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Suppression d\'absence - À implémenter')),
+                      );
+                      break;
+                    case 'sync':
+                      // TODO: Synchroniser l'absence
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Synchronisation d\'absence - À implémenter')),
+                      );
+                      break;
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'edit',
+                    child: Row(
+                      children: [
+                        Icon(Icons.edit),
+                        SizedBox(width: 8),
+                        Text('Éditer'),
+                      ],
+                    ),
+                  ),
+                  if (!isPresent)
+                    const PopupMenuItem(
+                      value: 'sync',
+                      child: Row(
+                        children: [
+                          Icon(Icons.cloud_upload),
+                          SizedBox(width: 8),
+                          Text('Synchroniser'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'delete',
+                    child: Row(
+                      children: [
+                        Icon(Icons.delete),
+                        SizedBox(width: 8),
+                        Text('Supprimer'),
+                      ],
+                    ),
+                  ),
+                ],
+              )
+            : null,
       ),
     );
   }

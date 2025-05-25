@@ -9,10 +9,10 @@ class SessionFormScreen extends ConsumerStatefulWidget {
   final String? sessionId; // Si non null, on est en mode édition
 
   const SessionFormScreen({
-    Key? key,
+    super.key,
     required this.initialDate,
     this.sessionId,
-  }) : super(key: key);
+  });
 
   @override
   ConsumerState<SessionFormScreen> createState() => _SessionFormScreenState();
