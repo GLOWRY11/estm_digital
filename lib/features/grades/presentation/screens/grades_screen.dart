@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../../auth/providers/auth_provider.dart';
+import 'grade_add_screen.dart';
+import 'grade_statistics_screen.dart';
 
 class GradesScreen extends ConsumerStatefulWidget {
-  const GradesScreen({Key? key}) : super(key: key);
+  const GradesScreen({super.key});
 
   @override
   ConsumerState<GradesScreen> createState() => _GradesScreenState();
@@ -56,10 +58,7 @@ class _GradesScreenState extends ConsumerState<GradesScreen> {
         actions: isTeacher ? [
           IconButton(
             onPressed: () {
-              // TODO: Ajouter une note
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Formulaire d\'ajout de notes - À implémenter')),
-              );
+              _navigateToAddGrade(context);
             },
             icon: const Icon(Icons.add),
             tooltip: 'Ajouter une note',
@@ -174,10 +173,7 @@ class _GradesScreenState extends ConsumerState<GradesScreen> {
                             Expanded(
                               child: OutlinedButton.icon(
                                 onPressed: () {
-                                  // TODO: Voir statistiques
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Statistiques de ${subject['subject']} - À implémenter')),
-                                  );
+                                  _navigateToStatistics(context, subject);
                                 },
                                 icon: const Icon(Icons.analytics, size: 18),
                                 label: const Text('Statistiques'),
@@ -187,10 +183,7 @@ class _GradesScreenState extends ConsumerState<GradesScreen> {
                             Expanded(
                               child: FilledButton.icon(
                                 onPressed: () {
-                                  // TODO: Ajouter note
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Ajouter note pour ${subject['subject']} - À implémenter')),
-                                  );
+                                  _navigateToAddGradeForSubject(context, subject);
                                 },
                                 icon: const Icon(Icons.add, size: 18),
                                 label: const Text('Ajouter'),
@@ -203,10 +196,7 @@ class _GradesScreenState extends ConsumerState<GradesScreen> {
                           width: double.infinity,
                           child: OutlinedButton.icon(
                             onPressed: () {
-                              // TODO: Voir statistiques (lecture seule)
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Mes statistiques en ${subject['subject']} - À implémenter')),
-                              );
+                              _navigateToStatistics(context, subject);
                             },
                             icon: const Icon(Icons.analytics, size: 18),
                             label: const Text('Statistiques'),
@@ -326,5 +316,78 @@ class _GradesScreenState extends ConsumerState<GradesScreen> {
   String _formatDate(String dateStr) {
     final date = DateTime.parse(dateStr);
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // Méthodes de navigation pour les boutons d'action
+
+  void _navigateToAddGrade(BuildContext context) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const GradeAddScreen(),
+      ),
+    );
+    
+    if (result == true && mounted) {
+      // Actualiser les données si une note a été ajoutée
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Note ajoutée avec succès'),
+          backgroundColor: Colors.green,
+          action: SnackBarAction(
+            label: 'Fermer',
+            textColor: Colors.white,
+            onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _navigateToAddGradeForSubject(BuildContext context, Map<String, dynamic> subject) async {
+    final result = await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => GradeAddScreen(
+          subjectFilter: subject['subject'],
+        ),
+      ),
+    );
+    
+    if (result == true && mounted) {
+      // Actualiser les données si une note a été ajoutée
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Note ajoutée pour ${subject['subject']}'),
+          backgroundColor: Colors.green,
+          action: SnackBarAction(
+            label: 'Fermer',
+            textColor: Colors.white,
+            onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+          ),
+        ),
+      );
+    }
+  }
+
+  void _navigateToStatistics(BuildContext context, Map<String, dynamic> subject) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => GradeStatisticsScreen(
+          subjectFilter: subject['subject'],
+        ),
+      ),
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Statistiques pour ${subject['subject']}'),
+        backgroundColor: Colors.blue,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
+      ),
+    );
   }
 } 

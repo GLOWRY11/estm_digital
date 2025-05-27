@@ -5,9 +5,9 @@ class AppDrawer extends StatelessWidget {
   final String currentUserRole;
   
   const AppDrawer({
-    Key? key,
+    super.key,
     required this.currentUserRole,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

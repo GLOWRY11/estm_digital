@@ -283,7 +283,7 @@ class UserService {
   // Utilitaires
   static String _hashPassword(String password) {
     // Simple hash MD5 pour la démo - utiliser bcrypt en production
-    final bytes = utf8.encode(password + 'estm_salt');
+    final bytes = utf8.encode('${password}estm_salt');
     final digest = md5.convert(bytes);
     return digest.toString();
   }
@@ -358,7 +358,7 @@ class UserService {
         developer.log('Colonne lastLoginAt non trouvée, ignorée pour cette connexion');
         return true; // On continue sans erreur
       }
-      throw e;
+      rethrow;
     }
   }
 } 

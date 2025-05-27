@@ -6,10 +6,10 @@ class FiliereFormScreen extends StatefulWidget {
   final Function(Filiere) onSave;
 
   const FiliereFormScreen({
-    Key? key,
+    super.key,
     this.filiere,
     required this.onSave,
-  }) : super(key: key);
+  });
 
   @override
   State<FiliereFormScreen> createState() => _FiliereFormScreenState();

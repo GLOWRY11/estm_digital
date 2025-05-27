@@ -7,7 +7,7 @@ import '../../../auth/domain/entities/user.dart';
 class UserDetailScreen extends ConsumerStatefulWidget {
   final String userId;
 
-  const UserDetailScreen({Key? key, required this.userId}) : super(key: key);
+  const UserDetailScreen({super.key, required this.userId});
 
   @override
   ConsumerState<UserDetailScreen> createState() => _UserDetailScreenState();

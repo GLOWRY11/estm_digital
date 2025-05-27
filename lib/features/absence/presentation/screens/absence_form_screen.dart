@@ -14,7 +14,7 @@ import 'package:path_provider/path_provider.dart';
 class AbsenceFormScreen extends StatefulWidget {
   final Absence? absence;
 
-  const AbsenceFormScreen({Key? key, this.absence}) : super(key: key);
+  const AbsenceFormScreen({super.key, this.absence});
 
   @override
   _AbsenceFormScreenState createState() => _AbsenceFormScreenState();

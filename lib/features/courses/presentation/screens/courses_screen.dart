@@ -5,7 +5,7 @@ import '../../../auth/providers/auth_provider.dart';
 import '../../../../core/routes/app_routes.dart';
 
 class CoursesScreen extends ConsumerStatefulWidget {
-  const CoursesScreen({Key? key}) : super(key: key);
+  const CoursesScreen({super.key});
 
   @override
   ConsumerState<CoursesScreen> createState() => _CoursesScreenState();
@@ -168,10 +168,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // TODO: StudentListForCourseScreen
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Liste des étudiants - À implémenter')),
-                                );
+                                _navigateToStudentsList(context, course);
                               },
                               icon: const Icon(Icons.people, size: 18),
                               label: const Text('Étudiants'),
@@ -181,10 +178,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // TODO: Gérer les absences (QR ou formulaire)
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Gestion des absences - À implémenter')),
-                                );
+                                _navigateToAbsencesList(context, course);
                               },
                               icon: const Icon(Icons.event_busy, size: 18),
                               label: const Text('Absences'),
@@ -194,10 +188,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Expanded(
                             child: FilledButton.icon(
                               onPressed: () {
-                                // TODO: GradeFormScreen - Ajouter/modifier notes
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Gestion des notes - À implémenter')),
-                                );
+                                _navigateToGradesList(context, course);
                               },
                               icon: const Icon(Icons.grade, size: 18),
                               label: const Text('Notes'),
@@ -212,10 +203,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Expanded(
                             child: OutlinedButton.icon(
                               onPressed: () {
-                                // TODO: Consulter les absences en lecture seule
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Mes absences - À implémenter')),
-                                );
+                                _navigateToStudentAbsences(context, course);
                               },
                               icon: const Icon(Icons.event_busy, size: 18),
                               label: const Text('Absences'),
@@ -225,10 +213,7 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
                           Expanded(
                             child: FilledButton.icon(
                               onPressed: () {
-                                // TODO: Consulter les notes en lecture seule
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(content: Text('Mes notes - À implémenter')),
-                                );
+                                _navigateToStudentGrades(context, course);
                               },
                               icon: const Icon(Icons.grade, size: 18),
                               label: const Text('Notes'),
@@ -271,6 +256,131 @@ class _CoursesScreenState extends ConsumerState<CoursesScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  // Méthodes de navigation pour les boutons d'action des cours
+  
+  void _navigateToStudentsList(BuildContext context, Map<String, dynamic> course) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.usersList,
+      arguments: {
+        'courseId': course['id'],
+        'courseName': course['name'],
+        'filterByRole': 'student', // Filtrer pour afficher uniquement les étudiants
+      },
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Liste des étudiants pour ${course['name']}'),
+        backgroundColor: Colors.blue,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAbsencesList(BuildContext context, Map<String, dynamic> course) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.absenceList,
+      arguments: {
+        'courseId': course['id'],
+        'courseName': course['name'],
+        'mode': 'teacher', // Mode enseignant pour gestion complète
+      },
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Gestion des absences pour ${course['name']}'),
+        backgroundColor: Colors.red,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToGradesList(BuildContext context, Map<String, dynamic> course) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.teacherGrades,
+      arguments: {
+        'courseId': course['id'],
+        'courseName': course['name'],
+        'courseCode': course['code'],
+      },
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Gestion des notes pour ${course['name']}'),
+        backgroundColor: Colors.purple,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
+  // Méthodes de navigation pour les étudiants (mode lecture seule)
+  
+  void _navigateToStudentAbsences(BuildContext context, Map<String, dynamic> course) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.absenceList,
+      arguments: {
+        'courseId': course['id'],
+        'courseName': course['name'],
+        'mode': 'student', // Mode étudiant pour consultation seulement
+      },
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Mes absences pour ${course['name']}'),
+        backgroundColor: Colors.orange,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
+      ),
+    );
+  }
+
+  void _navigateToStudentGrades(BuildContext context, Map<String, dynamic> course) {
+    Navigator.of(context).pushNamed(
+      AppRoutes.grades,
+      arguments: {
+        'courseId': course['id'],
+        'courseName': course['name'],
+        'courseCode': course['code'],
+        'mode': 'student', // Mode étudiant pour consultation seulement
+      },
+    );
+    
+    // Feedback utilisateur
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Mes notes pour ${course['name']}'),
+        backgroundColor: Colors.green,
+        action: SnackBarAction(
+          label: 'Fermer',
+          textColor: Colors.white,
+          onPressed: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+        ),
       ),
     );
   }

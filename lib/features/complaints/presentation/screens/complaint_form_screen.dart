@@ -5,7 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 class ComplaintFormScreen extends ConsumerStatefulWidget {
   final String? complaintId;
 
-  const ComplaintFormScreen({Key? key, this.complaintId}) : super(key: key);
+  const ComplaintFormScreen({super.key, this.complaintId});
 
   @override
   ConsumerState<ComplaintFormScreen> createState() => _ComplaintFormScreenState();

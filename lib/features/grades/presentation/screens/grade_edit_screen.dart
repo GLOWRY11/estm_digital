@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/services/grade_service.dart';
+import 'dart:developer' as developer;
 
 class GradeEditScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> initialGrade;
@@ -78,9 +79,55 @@ class _GradeEditScreenState extends ConsumerState<GradeEditScreen> {
         throw Exception('La note finale doit être entre 0 et 20');
       }
 
-      final gradeId = widget.initialGrade['id'] ?? widget.initialGrade['gradeId'];
+      // Rechercher l'ID de la note avec différentes clés possibles
+      final gradeId = widget.initialGrade['id'] ?? 
+                     widget.initialGrade['gradeId'] ?? 
+                     widget.initialGrade['evaluationId'] ??
+                     widget.initialGrade['uuid'];
+      
       if (gradeId == null) {
-        throw Exception('ID de la note non trouvé');
+        // Si aucun ID n'est trouvé, créer un nouvel ID
+        final now = DateTime.now().millisecondsSinceEpoch.toString();
+        final tempId = 'grade_${now}_${widget.studentName.replaceAll(' ', '_')}';
+        developer.log('Aucun ID trouvé, création d\'un ID temporaire: $tempId');
+        
+        // Essayer de créer une nouvelle note au lieu de la mettre à jour
+        final studentId = widget.initialGrade['studentId']?.toString() ?? 
+                         widget.initialGrade['etudiantId']?.toString() ?? 
+                         'unknown_student';
+        
+        final success = await GradeService.insertGrade(
+          studentId: studentId,
+          courseId: widget.initialGrade['courseId']?.toString() ?? 'unknown',
+          courseTitle: widget.initialGrade['courseTitle']?.toString() ?? 'Cours',
+          semester: widget.initialGrade['semester']?.toString() ?? 'S1',
+          midterm: midterm,
+          final_: final_,
+          comment: comment.isEmpty ? null : comment,
+        );
+        
+        if (success.isNotEmpty) {
+          // Mise à jour réussie via insertion
+          final updatedGrade = Map<String, dynamic>.from(widget.initialGrade);
+          updatedGrade['id'] = success;
+          updatedGrade['midterm'] = midterm;
+          updatedGrade['final'] = final_;
+          updatedGrade['average'] = _average;
+          updatedGrade['comment'] = comment;
+          
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Note créée avec succès'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.of(context).pop(updatedGrade);
+          }
+          return;
+        } else {
+          throw Exception('Impossible de créer la note');
+        }
       }
 
       // Mettre à jour la note via le service

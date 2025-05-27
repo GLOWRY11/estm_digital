@@ -6,6 +6,7 @@ import '../../../auth/presentation/providers/auth_providers.dart';
 import '../../domain/entities/absence_entity.dart';
 import '../providers/absence_providers.dart';
 import '../../../../core/routes/app_routes.dart';
+import 'absence_entity_form_screen.dart';
 
 class AbsencesListScreen extends ConsumerWidget {
   static const routeName = '/absences-list';
@@ -22,14 +23,14 @@ class AbsencesListScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Liste des absences'),
         backgroundColor: theme.colorScheme.primary,
-        actions: [
+        actions: isTeacher ? [
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: () {
               ref.invalidate(studentAbsencesProvider);
             },
           ),
-        ],
+        ] : [],
       ),
       body: currentUser == null
           ? const Center(
@@ -88,7 +89,7 @@ class AbsencesListScreen extends ConsumerWidget {
           itemCount: absencesList.length,
           itemBuilder: (context, index) {
             final absence = absencesList[index];
-            return _buildAbsenceCard(context, absence, theme, user.role == 'teacher');
+            return _buildAbsenceCard(context, ref, absence, theme, user.role == 'teacher');
           },
         );
       },
@@ -111,7 +112,7 @@ class AbsencesListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildAbsenceCard(BuildContext context, AbsenceEntity absence, ThemeData theme, bool isTeacher) {
+  Widget _buildAbsenceCard(BuildContext context, WidgetRef ref, AbsenceEntity absence, ThemeData theme, bool isTeacher) {
     final dateFormat = DateFormat('dd/MM/yyyy');
     final isPresent = absence.status == 'synced';
     
@@ -145,22 +146,13 @@ class AbsencesListScreen extends ConsumerWidget {
                 onSelected: (value) {
                   switch (value) {
                     case 'edit':
-                      // TODO: Éditer l'absence
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Édition d\'absence - À implémenter')),
-                      );
+                      _editAbsence(context, ref, absence);
                       break;
                     case 'delete':
-                      // TODO: Supprimer l'absence
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Suppression d\'absence - À implémenter')),
-                      );
+                      _deleteAbsence(context, ref, absence);
                       break;
                     case 'sync':
-                      // TODO: Synchroniser l'absence
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Synchronisation d\'absence - À implémenter')),
-                      );
+                      _syncAbsence(context, ref, absence);
                       break;
                   }
                 },
@@ -201,5 +193,126 @@ class AbsencesListScreen extends ConsumerWidget {
             : null,
       ),
     );
+  }
+
+  // Méthodes d'action pour les absences
+  void _editAbsence(BuildContext context, WidgetRef ref, AbsenceEntity absence) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (context) => AbsenceEntityFormScreen(absence: absence),
+      ),
+    );
+    
+    if (result == true) {
+      // Rafraîchir la liste des absences
+      ref.invalidate(studentAbsencesProvider);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Absence modifiée avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
+  void _deleteAbsence(BuildContext context, WidgetRef ref, AbsenceEntity absence) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text(
+          'Êtes-vous sûr de vouloir supprimer cette absence ?\n\n'
+          'Cette action est irréversible.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Annuler'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            style: FilledButton.styleFrom(
+              backgroundColor: Colors.red,
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        // Note: Implémenter deleteAbsence dans AbsenceDataSource si nécessaire
+        await ref.read(absenceRepositoryProvider).updateAbsenceStatus(
+          absence.id,
+          'deleted',
+        );
+        
+        // Rafraîchir la liste
+        ref.invalidate(studentAbsencesProvider);
+        
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Absence supprimée avec succès'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur lors de la suppression: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  void _syncAbsence(BuildContext context, WidgetRef ref, AbsenceEntity absence) async {
+    if (absence.status == 'synced') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Cette absence est déjà synchronisée'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    try {
+      // Mettre à jour le statut à 'synced'
+      await ref.read(absenceRepositoryProvider).updateAbsenceStatus(
+        absence.id,
+        'synced',
+      );
+      
+      // Rafraîchir la liste
+      ref.invalidate(studentAbsencesProvider);
+      
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Absence synchronisée avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la synchronisation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 

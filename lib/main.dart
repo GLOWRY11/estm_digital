@@ -31,7 +31,11 @@ import 'features/complaints/presentation/screens/complaint_form_screen.dart';
 import 'features/absence/presentation/screens/absence_list_screen.dart';
 
 // Other modules
+import 'features/courses/presentation/screens/courses_list_screen.dart';
+import 'features/grades/presentation/screens/teacher_grades_screen.dart';
+import 'features/filiere/presentation/screens/filiere_list_screen.dart';
 import 'features/courses/presentation/screens/courses_screen.dart';
+import 'features/courses/presentation/screens/student_course_add_screen.dart';
 import 'features/grades/presentation/screens/grades_screen.dart';
 import 'features/scheduling/presentation/screens/schedule_screen.dart';
 import 'features/reporting/presentation/screens/reports_screen.dart';
@@ -60,7 +64,7 @@ void main() async {
 }
 
 class EstmDigitalApp extends ConsumerWidget {
-  const EstmDigitalApp({Key? key}) : super(key: key);
+  const EstmDigitalApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -97,12 +101,16 @@ class EstmDigitalApp extends ConsumerWidget {
         '/student_home': (context) => const StudentHomeScreen(),
         '/qr_scanner': (context) => const QRScannerScreen(),
         '/qr_generator': (context) => const QRGeneratorScreen(),
-        '/users': (context) => const UsersListScreen(),
+        '/users-list': (context) => const UsersListScreen(),
         '/user_form': (context) => const UserFormScreen(),
         '/complaints': (context) => const ComplaintsListScreen(),
         '/complaint_form': (context) => const ComplaintFormScreen(),
         '/absences': (context) => const AbsenceListScreen(),
+        '/courses-list': (context) => const CoursesListScreen(),
+        '/teacher-grades': (context) => const TeacherGradesScreen(),
+        '/filieres': (context) => const FiliereListScreen(),
         '/courses': (context) => const CoursesScreen(),
+        '/student-add-course': (context) => const StudentCourseAddScreen(),
         '/grades': (context) => const GradesScreen(),
         '/schedule': (context) => const ScheduleScreen(),
         '/reports': (context) => const ReportsScreen(),
@@ -138,7 +146,7 @@ class EstmDigitalApp extends ConsumerWidget {
 
 // Wrapper d'authentification qui gère l'état de connexion
 class AuthenticationWrapper extends ConsumerWidget {
-  const AuthenticationWrapper({Key? key}) : super(key: key);
+  const AuthenticationWrapper({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

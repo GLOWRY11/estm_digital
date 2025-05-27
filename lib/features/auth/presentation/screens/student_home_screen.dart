@@ -4,7 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
 
 class StudentHomeScreen extends ConsumerWidget {
-  const StudentHomeScreen({Key? key}) : super(key: key);
+  const StudentHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

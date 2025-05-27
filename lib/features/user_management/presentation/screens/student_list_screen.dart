@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_management_providers.dart';
 import 'student_detail_screen.dart';
+import '../../../grades/presentation/screens/student_grades_management_screen.dart';
 
 class StudentListScreen extends ConsumerWidget {
   final String classId;
@@ -57,6 +58,11 @@ class StudentListScreen extends ConsumerWidget {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
+                        icon: const Icon(Icons.grade, color: Colors.purple),
+                        onPressed: () => _navigateToStudentGrades(context, student),
+                        tooltip: 'Gérer les notes',
+                      ),
+                      IconButton(
                         icon: const Icon(Icons.edit, color: Colors.blue),
                         onPressed: () {
                           // TODO: Navigate to Edit Student screen
@@ -111,6 +117,42 @@ class StudentListScreen extends ConsumerWidget {
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// Navigation vers la gestion des notes de l'étudiant
+  void _navigateToStudentGrades(BuildContext context, dynamic student) {
+    try {
+      // Vérifier que l'étudiant a les propriétés nécessaires
+      final studentId = student?.uid ?? student?.id ?? student?.userId;
+      final studentName = student?.displayName ?? student?.email ?? 'Étudiant inconnu';
+      
+      if (studentId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur: ID étudiant manquant'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+      
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => StudentGradesManagementScreen(
+            studentId: studentId.toString(),
+            studentName: studentName.toString(),
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la navigation: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _confirmActionDialog(

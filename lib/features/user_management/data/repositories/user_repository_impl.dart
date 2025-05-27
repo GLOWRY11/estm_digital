@@ -1,4 +1,3 @@
-import 'package:sqflite/sqflite.dart';
 import '../../domain/entities/user_entity.dart';
 import '../../domain/entities/class_entity.dart';
 import '../../domain/repositories/user_repository.dart';

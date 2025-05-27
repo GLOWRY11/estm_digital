@@ -4,9 +4,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../core/services/absence_service.dart';
 import '../auth/providers/auth_provider.dart';
+import 'services/qr_sharing_service.dart';
 
 class QRGeneratorScreen extends ConsumerStatefulWidget {
-  const QRGeneratorScreen({Key? key}) : super(key: key);
+  const QRGeneratorScreen({super.key});
 
   @override
   ConsumerState<QRGeneratorScreen> createState() => _QRGeneratorScreenState();
@@ -18,6 +19,7 @@ class _QRGeneratorScreenState extends ConsumerState<QRGeneratorScreen> {
   DateTime _selectedDate = DateTime.now();
   String? _qrCodeData;
   bool _isGenerating = false;
+  final GlobalKey _qrKey = GlobalKey();
 
   @override
   void dispose() {
@@ -108,6 +110,29 @@ class _QRGeneratorScreenState extends ConsumerState<QRGeneratorScreen> {
       _courseIdController.clear();
       _selectedDate = DateTime.now();
     });
+  }
+
+  /// Partage le QR code généré
+  Future<void> _shareQrCode() async {
+    final user = ref.read(authStateProvider).user;
+    
+    if (user == null || _qrCodeData == null) {
+      _showErrorDialog('Aucun QR code à partager');
+      return;
+    }
+
+    try {
+      await QrSharingService.showSharingOptions(
+        context: context,
+        qrKey: _qrKey,
+        sessionId: _sessionIdController.text.trim(),
+        courseId: _courseIdController.text.trim(),
+        sessionDate: _selectedDate,
+        teacherName: user.displayName ?? user.email ?? 'Enseignant',
+      );
+    } catch (e) {
+      _showErrorDialog('Erreur lors du partage: $e');
+    }
   }
 
   @override
@@ -363,12 +388,15 @@ class _QRGeneratorScreenState extends ConsumerState<QRGeneratorScreen> {
                             ),
                           ],
                         ),
-                        child: QrImageView(
-                          data: _qrCodeData!,
-                          version: QrVersions.auto,
-                          size: 250.0,
-                          backgroundColor: Colors.white,
-                          foregroundColor: Colors.black,
+                        child: RepaintBoundary(
+                          key: _qrKey,
+                          child: QrImageView(
+                            data: _qrCodeData!,
+                            version: QrVersions.auto,
+                            size: 250.0,
+                            backgroundColor: Colors.white,
+                            foregroundColor: Colors.black,
+                          ),
                         ),
                       ),
 
@@ -430,10 +458,7 @@ class _QRGeneratorScreenState extends ConsumerState<QRGeneratorScreen> {
                           const SizedBox(width: 12),
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed: () {
-                                // TODO: Implémenter le partage du QR code
-                                _showSuccessSnackBar('Fonctionnalité de partage bientôt disponible');
-                              },
+                              onPressed: _shareQrCode,
                               icon: const Icon(Icons.share),
                               label: const Text('Partager'),
                               style: FilledButton.styleFrom(

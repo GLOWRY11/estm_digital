@@ -6,7 +6,7 @@ import '../../core/services/absence_service.dart';
 import '../auth/providers/auth_provider.dart';
 
 class QRScannerScreen extends ConsumerStatefulWidget {
-  const QRScannerScreen({Key? key}) : super(key: key);
+  const QRScannerScreen({super.key});
 
   @override
   ConsumerState<QRScannerScreen> createState() => _QRScannerScreenState();

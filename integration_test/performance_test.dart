@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'dart:async';
 import 'package:estm_digital/main.dart' as app;
 
 /// Ce test est configuré pour mesurer la performance de l'application.

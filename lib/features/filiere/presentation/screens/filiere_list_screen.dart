@@ -4,7 +4,7 @@ import 'package:estm_digital/features/filiere/data/filiere_service.dart';
 import 'package:estm_digital/features/filiere/presentation/screens/filiere_form_screen.dart';
 
 class FiliereListScreen extends StatefulWidget {
-  const FiliereListScreen({Key? key}) : super(key: key);
+  const FiliereListScreen({super.key});
 
   @override
   _FiliereListScreenState createState() => _FiliereListScreenState();

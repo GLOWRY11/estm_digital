@@ -8,7 +8,7 @@ import 'dart:developer' as developer;
 class LocalDatabase {
   static Database? _database;
   static const String _databaseName = 'estm_digital.db';
-  static const int _databaseVersion = 3;
+  static const int _databaseVersion = 4;
 
   // Table names
   static const String tableUsers = 'users';
@@ -182,6 +182,84 @@ class LocalDatabase {
     ''');
     developer.log('Table complaints créée');
     
+    // Table Filiere
+    await db.execute('''
+      CREATE TABLE Filiere (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        annee TEXT,
+        description TEXT,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+    developer.log('Table Filiere créée');
+    
+    // Table Etudiant
+    await db.execute('''
+      CREATE TABLE Etudiant (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        email TEXT NOT NULL UNIQUE,
+        filiereId INTEGER NOT NULL,
+        matricule TEXT,
+        dateNaissance TEXT,
+        adresse TEXT,
+        telephone TEXT,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (filiereId) REFERENCES Filiere (id)
+      )
+    ''');
+    developer.log('Table Etudiant créée');
+    
+    // Table Module
+    await db.execute('''
+      CREATE TABLE Module (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        code TEXT,
+        credits INTEGER DEFAULT 3,
+        semestre INTEGER,
+        description TEXT,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+      )
+    ''');
+    developer.log('Table Module créée');
+    
+    // Table Notification
+    await db.execute('''
+      CREATE TABLE Notification (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        content TEXT NOT NULL,
+        date TEXT NOT NULL,
+        isRead INTEGER DEFAULT 0,
+        etudiantId INTEGER,
+        enseignantId INTEGER,
+        createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (etudiantId) REFERENCES Etudiant (id),
+        FOREIGN KEY (enseignantId) REFERENCES $tableUsers (id)
+      )
+    ''');
+    developer.log('Table Notification créée');
+    
+    // Table grades
+    await db.execute('''
+      CREATE TABLE grades (
+        id TEXT PRIMARY KEY,
+        studentId TEXT NOT NULL,
+        courseId TEXT NOT NULL,
+        courseTitle TEXT NOT NULL,
+        semester TEXT NOT NULL,
+        midterm REAL NOT NULL,
+        final REAL NOT NULL,
+        average REAL NOT NULL,
+        comment TEXT,
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT,
+        FOREIGN KEY (studentId) REFERENCES $tableUsers (id)
+      )
+    ''');
+    developer.log('Table grades créée');
+    
     // Index pour performance
     await db.execute('CREATE INDEX idx_users_email ON $tableUsers (email)');
     await db.execute('CREATE INDEX idx_users_role ON $tableUsers (role)');
@@ -227,6 +305,186 @@ class LocalDatabase {
         developer.log('Erreur lors de la création de la table Absence: $e');
         // La table existe peut-être déjà, on continue
       }
+      
+      // Ajouter les nouvelles tables
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Filiere (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            annee TEXT,
+            description TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+        developer.log('Table Filiere créée avec succès lors de la migration');
+      } catch (e) {
+        developer.log('Erreur lors de la création de la table Filiere: $e');
+      }
+      
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Etudiant (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            filiereId INTEGER NOT NULL,
+            matricule TEXT,
+            dateNaissance TEXT,
+            adresse TEXT,
+            telephone TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (filiereId) REFERENCES Filiere (id)
+          )
+        ''');
+        developer.log('Table Etudiant créée avec succès lors de la migration');
+      } catch (e) {
+        developer.log('Erreur lors de la création de la table Etudiant: $e');
+      }
+      
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Module (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            code TEXT,
+            credits INTEGER DEFAULT 3,
+            semestre INTEGER,
+            description TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+        developer.log('Table Module créée avec succès lors de la migration');
+      } catch (e) {
+        developer.log('Erreur lors de la création de la table Module: $e');
+      }
+      
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Notification (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            date TEXT NOT NULL,
+            isRead INTEGER DEFAULT 0,
+            etudiantId INTEGER,
+            enseignantId INTEGER,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (etudiantId) REFERENCES Etudiant (id),
+            FOREIGN KEY (enseignantId) REFERENCES $tableUsers (id)
+          )
+        ''');
+        developer.log('Table Notification créée avec succès lors de la migration');
+      } catch (e) {
+        developer.log('Erreur lors de la création de la table Notification: $e');
+      }
+      
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS grades (
+            id TEXT PRIMARY KEY,
+            studentId TEXT NOT NULL,
+            courseId TEXT NOT NULL,
+            courseTitle TEXT NOT NULL,
+            semester TEXT NOT NULL,
+            midterm REAL NOT NULL,
+            final REAL NOT NULL,
+            average REAL NOT NULL,
+            comment TEXT,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT,
+            FOREIGN KEY (studentId) REFERENCES $tableUsers (id)
+          )
+        ''');
+        developer.log('Table grades créée avec succès lors de la migration');
+      } catch (e) {
+        developer.log('Erreur lors de la création de la table grades: $e');
+      }
+    }
+    
+    if (oldVersion < 4) {
+      // Migration vers version 4 - Ajout des tables manquantes pour les utilisateurs existants
+      developer.log('Migration vers version 4 - Création des tables manquantes');
+      
+      try {
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Filiere (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            annee TEXT,
+            description TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+        developer.log('Table Filiere vérifiée/créée');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Etudiant (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            filiereId INTEGER NOT NULL,
+            matricule TEXT,
+            dateNaissance TEXT,
+            adresse TEXT,
+            telephone TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (filiereId) REFERENCES Filiere (id)
+          )
+        ''');
+        developer.log('Table Etudiant vérifiée/créée');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Module (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            code TEXT,
+            credits INTEGER DEFAULT 3,
+            semestre INTEGER,
+            description TEXT,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+          )
+        ''');
+        developer.log('Table Module vérifiée/créée');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS Notification (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            content TEXT NOT NULL,
+            date TEXT NOT NULL,
+            isRead INTEGER DEFAULT 0,
+            etudiantId INTEGER,
+            enseignantId INTEGER,
+            createdAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (etudiantId) REFERENCES Etudiant (id),
+            FOREIGN KEY (enseignantId) REFERENCES $tableUsers (id)
+          )
+        ''');
+        developer.log('Table Notification vérifiée/créée');
+        
+        await db.execute('''
+          CREATE TABLE IF NOT EXISTS grades (
+            id TEXT PRIMARY KEY,
+            studentId TEXT NOT NULL,
+            courseId TEXT NOT NULL,
+            courseTitle TEXT NOT NULL,
+            semester TEXT NOT NULL,
+            midterm REAL NOT NULL,
+            final REAL NOT NULL,
+            average REAL NOT NULL,
+            comment TEXT,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT,
+            FOREIGN KEY (studentId) REFERENCES $tableUsers (id)
+          )
+        ''');
+        developer.log('Table grades vérifiée/créée');
+        
+        // Insérer quelques données par défaut pour les filières
+        await _insertFiliereDefaultData(db);
+        
+      } catch (e) {
+        developer.log('Erreur lors de la migration v4: $e');
+      }
     }
   }
 
@@ -235,7 +493,7 @@ class LocalDatabase {
 
     // Fonction de hashage locale (même que dans UserService)
     String hashPassword(String password) {
-      final bytes = utf8.encode(password + 'estm_salt');
+      final bytes = utf8.encode('${password}estm_salt');
       final digest = md5.convert(bytes);
       return digest.toString();
     }
@@ -296,6 +554,39 @@ class LocalDatabase {
       'location': 'Bâtiment Sciences',
       'createdAt': now,
     });
+  }
+  
+  static Future<void> _insertFiliereDefaultData(Database db) async {
+    final now = DateTime.now().toIso8601String();
+    
+    try {
+      // Filières par défaut
+      await db.insert('Filiere', {
+        'name': 'Informatique',
+        'annee': 'L3',
+        'description': 'Licence 3 en Informatique',
+        'createdAt': now,
+      });
+      
+      await db.insert('Filiere', {
+        'name': 'Génie Logiciel',
+        'annee': 'Master',
+        'description': 'Master en Génie Logiciel',
+        'createdAt': now,
+      });
+      
+      await db.insert('Filiere', {
+        'name': 'Réseaux et Télécommunications',
+        'annee': 'L3',
+        'description': 'Licence 3 en Réseaux et Télécommunications',
+        'createdAt': now,
+      });
+      
+      developer.log('Données par défaut des filières insérées');
+    } catch (e) {
+      developer.log('Erreur lors de l\'insertion des données par défaut des filières: $e');
+      // Ne pas faire échouer la migration pour cela
+    }
   }
 
   // Méthodes utilitaires

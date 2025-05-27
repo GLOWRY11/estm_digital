@@ -5,7 +5,7 @@ import '../../../../core/services/user_service.dart';
 import '../../../auth/domain/entities/user.dart';
 
 class UsersListScreen extends ConsumerStatefulWidget {
-  const UsersListScreen({Key? key}) : super(key: key);
+  const UsersListScreen({super.key});
 
   @override
   ConsumerState<UsersListScreen> createState() => _UsersListScreenState();

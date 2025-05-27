@@ -1,9 +1,11 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../../services/report_sharing_service.dart';
 
 class ReportsScreen extends ConsumerStatefulWidget {
-  const ReportsScreen({Key? key}) : super(key: key);
+  const ReportsScreen({super.key});
 
   @override
   ConsumerState<ReportsScreen> createState() => _ReportsScreenState();
@@ -99,7 +101,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
                   ),
                 ),
               );
-            }).toList(),
+            }),
 
             const SizedBox(height: 24),
 
@@ -277,9 +279,7 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
             backgroundColor: Colors.green,
             action: SnackBarAction(
               label: 'Partager',
-              onPressed: () {
-                // TODO: Implémenter le partage
-              },
+              onPressed: () => _shareReport(format),
             ),
           ),
         );
@@ -300,6 +300,61 @@ class _ReportsScreenState extends ConsumerState<ReportsScreen> {
         });
       }
     }
+  }
+
+  /// Partage un rapport généré
+  Future<void> _shareReport(String format) async {
+    try {
+      // Simulation de données de rapport pour la démonstration
+      // En production, ces données viendraient de la génération du rapport
+      final mockData = _generateMockReportData();
+      
+      await ReportSharingService.showSharingOptions(
+        context: context,
+        reportType: _selectedReportType,
+        format: format,
+        startDate: _startDate,
+        endDate: _endDate,
+        fileData: mockData,
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du partage: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Génère des données simulées pour le rapport
+  Uint8List _generateMockReportData() {
+    // Simulation d'un fichier rapport simple
+    final reportContent = '''
+RAPPORT ESTM DIGITAL - ${ReportSharingService.getReportTypeLabel(_selectedReportType).toUpperCase()}
+
+Période: ${_formatDate(_startDate)} au ${_formatDate(_endDate)}
+Type: $_selectedReportType
+
+--- DONNÉES SIMULÉES ---
+Nombre d'étudiants: 45
+Nombre de cours: 12
+Taux de présence moyen: 87%
+Nombre d'absences: 23
+
+--- DÉTAILS ---
+${List.generate(10, (index) => 'Ligne de données $index').join('\n')}
+
+--- GÉNÉRÉ LE ---
+${DateTime.now().toString()}
+
+ESTM - École Supérieure de Technologie et Management
+Application de Gestion Académique
+    ''';
+    
+    return Uint8List.fromList(reportContent.codeUnits);
   }
 
   String _formatDate(DateTime date) {

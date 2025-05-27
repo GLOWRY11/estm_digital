@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../widgets/auth_wrapper.dart';
-import '../../../../core/routes/app_routes.dart';
 
 class TeacherHomeScreen extends ConsumerWidget {
   const TeacherHomeScreen({super.key});
@@ -82,6 +80,18 @@ class TeacherHomeScreen extends ConsumerWidget {
               title: 'Mes Cours',
               icon: Icons.school,
               onTap: () => Navigator.of(context).pushNamed('/courses'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Ajouter un cours',
+              icon: Icons.add_circle,
+              onTap: () => Navigator.of(context).pushNamed('/student-add-course'),
+            ),
+            _buildFeatureCard(
+              context,
+              title: 'Liste Étudiants',
+              icon: Icons.people,
+              onTap: () => Navigator.of(context).pushNamed('/users-list'),
             ),
             _buildFeatureCard(
               context,

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'course_add_screen.dart';
+import '../../../auth/providers/auth_provider.dart';
 
 class ScheduleScreen extends ConsumerStatefulWidget {
-  const ScheduleScreen({Key? key}) : super(key: key);
+  const ScheduleScreen({super.key});
 
   @override
   ConsumerState<ScheduleScreen> createState() => _ScheduleScreenState();
@@ -40,6 +42,8 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
+    final currentUser = ref.watch(currentUserProvider);
+    final isTeacher = currentUser?.role == 'teacher';
 
     return Scaffold(
       backgroundColor: colorScheme.surface,
@@ -49,15 +53,13 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
           style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
         ),
         centerTitle: true,
-        actions: [
+        actions: isTeacher ? [
           IconButton(
-            onPressed: () {
-              // TODO: Ajouter un cours
-            },
+            onPressed: _navigateToAddCourse,
             icon: const Icon(Icons.add),
             tooltip: 'Ajouter un cours',
           ),
-        ],
+        ] : null,
       ),
       body: Column(
         children: [
@@ -215,6 +217,45 @@ class _ScheduleScreenState extends ConsumerState<ScheduleScreen> {
         ],
       ),
     );
+  }
+
+  /// Navigation vers le formulaire d'ajout de cours
+  Future<void> _navigateToAddCourse() async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const CourseAddScreen(),
+        ),
+      );
+
+      if (result != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Cours "${result['subject']}" ajouté au planning',
+              style: GoogleFonts.roboto(fontWeight: FontWeight.w500),
+            ),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+
+        // TODO: Actualiser la liste des cours
+        // setState(() {
+        //   _mockSchedule.add(result);
+        // });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de l\'ajout du cours: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Color _getTypeColor(String type) {

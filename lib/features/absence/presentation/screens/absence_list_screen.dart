@@ -1,17 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:estm_digital/features/absence/domain/absence_model.dart';
 import 'package:estm_digital/features/absence/data/absence_service.dart';
 import 'package:intl/intl.dart';
 import 'package:estm_digital/features/absence/presentation/screens/absence_form_screen.dart';
+import '../../../auth/providers/auth_provider.dart';
 
-class AbsenceListScreen extends StatefulWidget {
-  const AbsenceListScreen({Key? key}) : super(key: key);
+class AbsenceListScreen extends ConsumerStatefulWidget {
+  const AbsenceListScreen({super.key});
 
   @override
   _AbsenceListScreenState createState() => _AbsenceListScreenState();
 }
 
-class _AbsenceListScreenState extends State<AbsenceListScreen> {
+class _AbsenceListScreenState extends ConsumerState<AbsenceListScreen> {
   final AbsenceService _absenceService = AbsenceService();
   late Future<List<Absence>> _absencesFuture;
 
@@ -29,6 +31,9 @@ class _AbsenceListScreenState extends State<AbsenceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final currentUser = ref.watch(currentUserProvider);
+    final isTeacher = currentUser?.role == 'teacher';
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Liste des Absences'),
@@ -60,6 +65,7 @@ class _AbsenceListScreenState extends State<AbsenceListScreen> {
               final absence = absences[index];
               return AbsenceListItem(
                 absence: absence,
+                isTeacher: isTeacher,
                 onEdit: () async {
                   await Navigator.push(
                     context,
@@ -77,7 +83,7 @@ class _AbsenceListScreenState extends State<AbsenceListScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: isTeacher ? FloatingActionButton(
         onPressed: () async {
           await Navigator.push(
             context,
@@ -88,7 +94,7 @@ class _AbsenceListScreenState extends State<AbsenceListScreen> {
           _refreshAbsences();
         },
         child: const Icon(Icons.add),
-      ),
+      ) : null,
     );
   }
 
@@ -121,15 +127,17 @@ class _AbsenceListScreenState extends State<AbsenceListScreen> {
 
 class AbsenceListItem extends StatelessWidget {
   final Absence absence;
+  final bool isTeacher;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
 
   const AbsenceListItem({
-    Key? key,
+    super.key,
     required this.absence,
+    required this.isTeacher,
     required this.onEdit,
     required this.onDelete,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -176,19 +184,20 @@ class AbsenceListItem extends StatelessWidget {
               Text('Heure de fin: ${timeFormat.format(DateTime.parse(absence.endTime!))}'),
             Text('ID Étudiant: ${absence.etudiantId}'),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                IconButton(
-                  icon: const Icon(Icons.edit, color: Colors.blue),
-                  onPressed: onEdit,
-                ),
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
+            if (isTeacher)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.edit, color: Colors.blue),
+                    onPressed: onEdit,
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: onDelete,
+                  ),
+                ],
+              ),
           ],
         ),
       ),

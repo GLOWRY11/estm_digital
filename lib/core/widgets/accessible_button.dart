@@ -160,13 +160,13 @@ class AccessibleButton extends StatelessWidget {
     final effectiveStyle = style ?? const ButtonStyle();
     final mergedStyle = ButtonStyle(
       backgroundColor: effectiveBackgroundColor != null 
-          ? MaterialStateProperty.all(effectiveBackgroundColor)
+          ? WidgetStateProperty.all(effectiveBackgroundColor)
           : null,
-      foregroundColor: MaterialStateProperty.all(finalForegroundColor),
+      foregroundColor: WidgetStateProperty.all(finalForegroundColor),
       padding: padding != null 
-          ? MaterialStateProperty.all(padding)
+          ? WidgetStateProperty.all(padding)
           : null,
-      minimumSize: MaterialStateProperty.all(const Size(48.0, 48.0)),
+      minimumSize: WidgetStateProperty.all(const Size(48.0, 48.0)),
     ).copyWith(
       backgroundColor: effectiveStyle.backgroundColor,
       foregroundColor: effectiveStyle.foregroundColor,

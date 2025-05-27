@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/user_management_providers.dart';
+import 'teacher_add_screen.dart';
 
 class TeacherListScreen extends ConsumerWidget {
   const TeacherListScreen({super.key});
@@ -15,9 +16,7 @@ class TeacherListScreen extends ConsumerWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.add),
-            onPressed: () {
-              // TODO: Navigate to Add Teacher screen
-            },
+            onPressed: () => _navigateToAddTeacher(context),
           ),
         ],
       ),
@@ -112,12 +111,41 @@ class TeacherListScreen extends ConsumerWidget {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Navigate to Add Teacher screen
-        },
+        onPressed: () => _navigateToAddTeacher(context),
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  /// Navigation vers l'écran d'ajout d'enseignant
+  Future<void> _navigateToAddTeacher(BuildContext context) async {
+    try {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TeacherAddScreen(),
+        ),
+      );
+
+      if (result != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Enseignant "${result['displayName']}" créé avec succès'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _confirmActionDialog(
